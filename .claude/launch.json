@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:dev"],
+      "port": 3000,
+      "cwd": "sweet_book_project_be"
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/opt/homebrew/opt/node@22/bin/node",
+      "runtimeArgs": ["node_modules/.bin/vite"],
+      "port": 5173,
+      "cwd": "sweet_book_project_fe"
+    }
+  ]
+}
