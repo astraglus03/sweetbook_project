@@ -30,10 +30,12 @@ try {
 - 트랜잭션 안에서 외부 API 호출 금지 (롤백 불가능하므로)
 
 ## 외부 API 안전성
-- Sweetbook API 응답은 반드시 타입 검증 후 사용
+- Sweetbook/OpenAI API 응답은 반드시 타입 검증 후 사용
 - API 실패를 raw throw하지 말고 `ExternalApiException`으로 래핑
 - 외부 API 호출 시 timeout 설정 필수
 - 재시도(retry) 로직은 멱등성 있는 GET 요청에만 적용
+- OpenAI 응답 JSON 파싱 실패 시 기본값 반환 (서비스 중단 방지)
+- AI 분석 실패해도 핵심 기능(업로드, 포토북 제작)은 정상 동작해야 함 (graceful degradation)
 
 ## 보안
 - SQL 인젝션 방지: TypeORM 파라미터 바인딩 사용, raw query 최소화

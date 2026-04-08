@@ -36,6 +36,7 @@
 - 파일 업로드: Multer + 로컬 스토리지
 - 이미지 처리: Sharp (리사이징/최적화)
 - 외부 API: Sweetbook Book Print API
+- AI: OpenAI GPT-4o-mini Vision (사진 품질 분석), GPT-4o-mini (챕터 네이밍)
 
 ### Frontend
 - Framework: React 19 + Vite 8
@@ -185,9 +186,11 @@ sweet_book_project_be/src/
 │   ├── groups/               # 모임
 │   ├── photos/               # 사진 업로드/관리
 │   ├── books/                # 포토북 (Sweetbook Books API)
-│   └── orders/               # 주문 (Sweetbook Orders API)
+│   ├── orders/               # 주문 (Sweetbook Orders API)
+│   └── notifications/        # 알림 (업로드 독려, 이벤트)
 ├── external/
-│   └── sweetbook/            # Sweetbook API 클라이언트
+│   ├── sweetbook/            # Sweetbook API 클라이언트
+│   └── openai/               # OpenAI API 클라이언트 (사진 분석, 챕터 생성)
 └── main.ts
 ```
 

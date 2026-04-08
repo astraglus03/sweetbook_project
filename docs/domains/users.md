@@ -15,6 +15,8 @@
 ## 관계
 - `User` 1:N `GroupMember` — 사용자는 여러 모임에 참여 가능
 - `User` 1:N `Photo` — 사용자는 여러 사진 업로드 가능
+- `User` 1:N `CoverVote` — 사용자는 표지 투표 가능
+- `User` 1:N `Notification` — 사용자는 여러 알림 수신
 
 ## 인덱스
 - `idx_users_email` — email (UNIQUE)

@@ -42,7 +42,7 @@
   - `ForbiddenException` (HTTP 403)
   - `ValidationException` (HTTP 400)
   - `ConflictException` (HTTP 409)
-  - `ExternalApiException` (HTTP 502, Sweetbook API 실패)
+  - `ExternalApiException` (HTTP 502, Sweetbook/OpenAI API 실패)
 - 에러 코드 네이밍: `{DOMAIN}_{ACTION}_{REASON}`
   - 예: `GROUP_NOT_FOUND`, `BOOK_CREATION_FAILED`, `ORDER_ALREADY_COMPLETED`
 - 에러 메시지는 사용자에게 보여줄 수 있는 한국어로 작성
