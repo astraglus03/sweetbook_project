@@ -1,2 +1,5 @@
 # OMC runtime state
 .omc/
+
+# Claude Code worktrees
+.claude/worktrees/
