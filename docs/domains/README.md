@@ -22,7 +22,7 @@ User ──1:N──> Photo ──N:1──> Group
 Group ──1:N──> PhotoChapter ──1:N──> Photo
 Group ──1:N──> Book ──1:N──> BookPage ──N:1──> Photo
 Book ──N:1──> Photo (cover)
-Book ──1:1──> Order
+Book ──1:1──> OrderGroup ──1:N──> Order
 Group ──1:N──> CoverVote ──N:1──> Photo
 CoverVote ──N:1──> User
 Group ──1:N──> Notification ──N:1──> User

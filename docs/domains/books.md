@@ -20,11 +20,18 @@
 | updated_at | TIMESTAMP | DEFAULT NOW() | 수정일 |
 
 ### status ENUM 값
-- `DRAFT` — 편집중
-- `PROCESSING` — Sweetbook API 전송 중 (Bull Queue)
-- `READY` — 생성 완료 (주문 가능)
+- `DRAFT` — 편집중 (페이지 구성 중)
+- `UPLOADING` — 사진을 Sweetbook 서버에 업로드 중
+- `PROCESSING` — 표지/내지 추가 + finalization 진행 중
+- `READY` — finalization 완료 (주문 가능, 수정 불가)
 - `ORDERED` — 주문됨
 - `FAILED` — 생성 실패
+
+### 판형별 최소 페이지 규칙
+- SQUAREBOOK_HC: 최소 24페이지 (사진 부족 시 finalization 에러)
+- LAYFLAT_HC: 최소 16페이지
+- SLIMALBUM_HC: 최소 20페이지
+- AI 큐레이션 시 이 규칙 반영하여 사진 수 부족 경고 필수
 
 ## book_pages 테이블
 
@@ -81,7 +88,16 @@
 - PDF 다운로드 지원
 - `is_shared`로 공유 on/off 토글
 
-## Sweetbook Books API 연동
-- 포토북 생성 시 `SweetbookApiService.createBook()` 호출
-- 응답의 `book_id`를 `sweetbook_book_id`에 저장
-- Bull Queue로 비동기 처리: DRAFT → PROCESSING → READY/FAILED
+## Sweetbook Books API 연동 (필수 순서)
+```
+1. GET /book-specs → 판형 선택
+2. GET /templates → 템플릿 선택
+3. POST /books → 빈 책 생성 (sweetbook_book_id 저장)
+4. POST /books/{uid}/photos → 사진 업로드 (우리 서버 → Sweetbook)
+5. POST /books/{uid}/cover → 표지 추가 (투표 결과 사진)
+6. POST /books/{uid}/contents (반복) → 내지 페이지 추가
+7. POST /books/{uid}/finalization → 최종화 (이후 수정 불가!)
+```
+- Bull Queue로 비동기 처리: DRAFT → UPLOADING → PROCESSING → READY/FAILED
+- 사진 업로드 2단계: 우리 서버 사진 → Sweetbook에 재업로드 → 반환된 fileName으로 contents 구성
+- finalize 전에는 주문 불가, finalize 후에는 수정 불가

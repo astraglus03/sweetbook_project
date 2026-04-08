@@ -267,6 +267,10 @@ sweet_book_project_fe/src/
 - 외부 API 응답은 타입가드로 검증 후 사용
 - 요청/응답 로깅 필수
 - Sandbox 환경 사용 (실제 인쇄/배송 없음)
+- 주문 생성 시 `Idempotency-Key` 헤더 필수 (충전금 이중 차감 방지)
+- 사진 업로드 2단계: 우리 서버 저장 → Sweetbook 서버에 재업로드
+- 포토북 생성 순서 엄수: 책 생성 → 사진 업로드 → 표지/내지 → finalization → 주문
+- 판형별 최소 페이지 규칙 준수 (SQUAREBOOK_HC: 24p 이상)
 
 ---
 
