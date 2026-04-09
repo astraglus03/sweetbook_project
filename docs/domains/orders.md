@@ -39,14 +39,22 @@
 | created_at | TIMESTAMP | DEFAULT NOW() | 생성일 |
 | updated_at | TIMESTAMP | DEFAULT NOW() | 수정일 |
 
-### status ENUM 값 (Order)
-- `PENDING` — 배송 정보 입력 대기
-- `PAID` — 결제 완료 (Sweetbook 충전금 차감)
-- `PDF_READY` — PDF 생성 완료
-- `PRODUCING` — 제작중
-- `SHIPPING` — 배송중
-- `DELIVERED` — 배송 완료
-- `CANCELLED` — 취소됨
+### status ENUM 값 (Order) — Sweetbook 상태 코드 매핑
+| 내부 상태 | Sweetbook 코드 | 설명 |
+|-----------|---------------|------|
+| `PENDING` | - (내부 전용) | 배송 정보 입력 대기 (Sweetbook 주문 전) |
+| `PAID` | 20 | 결제 완료 (충전금 차감) |
+| `PDF_READY` | 25 | PDF 생성 완료 |
+| `CONFIRMED` | 30 | 제작 확정 (인쇄일 배정) |
+| `IN_PRODUCTION` | 40 | 제작 진행중 |
+| `PRODUCTION_COMPLETE` | 50 | 제작 완료 |
+| `SHIPPED` | 60 | 발송 완료 |
+| `DELIVERED` | 70 | 배송 완료 |
+| `CANCELLED` | 80 | 취소됨 |
+| `CANCELLED_REFUND` | 81 | 환불 완료 |
+| `ERROR` | 90 | 오류 발생 |
+
+> **주의**: Sweetbook API는 주문 생성 즉시 `PAID(20)` 상태. `PENDING`은 우리 서비스 내부에서 배송정보 수집 중인 상태로만 사용.
 
 ## 관계
 - `OrderGroup` 1:1 `Book` — 주문 그룹이 연결된 포토북
@@ -67,14 +75,58 @@
 ## 주문 플로우
 ```
 1. 방장이 포토북 finalization 완료 (Book status: READY)
-2. POST /orders/estimate로 1권당 가격 견적 조회
-3. OrderGroup 생성 (status: COLLECTING)
-4. 멤버 각자 배송 정보 입력 → 개별 Order 생성 (status: PENDING)
-5. 방장이 최종 확인 → OrderGroup status: CONFIRMED
-6. 멤버별로 Sweetbook POST /orders 호출 (Idempotency-Key 필수!)
-7. 성공 → Order status: PAID + sweetbook_order_id 저장
-8. Webhook 또는 폴링으로 PRODUCING → SHIPPING → DELIVERED 추적
+2. GET /credits → 충전금 잔액 확인
+3. POST /orders/estimate → 1권당 가격 견적 조회
+4. OrderGroup 생성 (status: COLLECTING)
+5. 멤버 각자 배송 정보 입력 → 개별 Order 생성 (status: PENDING)
+6. 방장이 최종 확인 → OrderGroup status: CONFIRMED
+7. 멤버별로 Sweetbook POST /orders 호출 (Idempotency-Key 필수!)
+   → 성공: Order status: PAID + sweetbook_order_id 저장
+   → 실패(402): 충전금 부족 에러 → 사용자에게 안내
+8. Webhook으로 상태 변경 수신 (또는 GET /orders/{orderUid} 폴링)
+   PAID(20) → PDF_READY(25) → CONFIRMED(30) → IN_PRODUCTION(40)
+   → PRODUCTION_COMPLETE(50) → SHIPPED(60) → DELIVERED(70)
 ```
+
+## Sweetbook Orders API 상세
+
+### POST /orders — 주문 생성
+```json
+// Headers
+{ "Authorization": "Bearer API_KEY", "Idempotency-Key": "order-{bookId}-{userId}-{timestamp}" }
+
+// Request Body
+{
+  "items": [{ "bookUid": "bk_xxx", "quantity": 1 }],
+  "shipping": {
+    "recipientName": "홍길동",
+    "recipientPhone": "010-1234-5678",
+    "postalCode": "06101",
+    "address1": "서울시 강남구 테헤란로 123",
+    "address2": "4층 401호",
+    "memo": "부재시 경비실"
+  },
+  "externalRef": "groupbook-order-{orderId}"
+}
+```
+
+### POST /orders/estimate — 가격 견적
+- items[].bookUid + items[].quantity로 견적 조회
+
+### GET /orders/{orderUid} — 주문 상태 조회
+- 폴링 방식 상태 추적 (웹훅 fallback)
+- 응답: orderStatus, items[].itemStatus, tracking 정보
+
+### POST /orders/{orderUid}/cancel — 주문 취소
+- **PAID(20) 또는 PDF_READY(25) 상태에서만 가능**
+- CONFIRMED(30) 이후 취소 불가 → ForbiddenException
+- Request: `{ "cancelReason": "고객 요청에 의한 취소" }`
+- 취소 시 충전금 즉시 환불
+
+### PATCH /orders/{orderUid}/shipping — 배송지 수정
+- **PAID(20) ~ CONFIRMED(30) 상태에서만 가능** (발송 전)
+- 부분 수정 지원 (변경 필드만 전송)
+- Request: `{ "recipientName": "김영희", "address1": "서울시 서초구..." }`
 
 ## 멤버별 개별 배송
 - Sweetbook API는 주문 1개 = 배송지 1개
@@ -82,9 +134,25 @@
 - OrderGroup이 이들을 묶는 상위 엔티티
 
 ## 취소 규칙
-- `PAID`, `PDF_READY` 상태에서만 취소 가능 (Sweetbook API 기준)
-- `PRODUCING` 이후 취소 불가 → ForbiddenException
+- `PAID(20)`, `PDF_READY(25)` 상태에서만 취소 가능 (Sweetbook API 기준)
+- `CONFIRMED(30)` 이후 취소 불가 → ForbiddenException
 - 개별 Order만 취소 가능 (다른 멤버 주문에 영향 없음)
+- 취소 시 cancelReason 필수 (최대 500자)
+- 취소 → 충전금 즉시 환불 → status: `CANCELLED_REFUND(81)`
+
+## 배송지 수정 규칙
+- `PAID(20)` ~ `CONFIRMED(30)` 상태에서만 수정 가능
+- `IN_PRODUCTION(40)` 이후 수정 불가
+- 부분 수정 지원: 변경할 필드만 전송
+- 수정 가능 필드: recipientName, recipientPhone, postalCode, address1, address2, memo
+
+## 가격 구조
+- **상품금액**: `priceBase + ((pageCount - pageMin) / pageIncrement) * pricePerIncrement`
+- **배송비**: 3,000원/건
+- **포장비**: 별도 (해당 시)
+- **VAT**: 10% 포함
+- **총액**: `totalProductAmount + totalShippingFee + totalPackagingFee` (VAT 포함)
+- Sweetbook 충전금(크레딧)에서 차감
 
 ## 멱등성 키
 - 주문 생성 시 반드시 고유한 `idempotency_key` 생성

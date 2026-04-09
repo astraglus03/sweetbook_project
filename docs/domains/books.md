@@ -27,11 +27,22 @@
 - `ORDERED` — 주문됨
 - `FAILED` — 생성 실패
 
-### 판형별 최소 페이지 규칙
-- SQUAREBOOK_HC: 최소 24페이지 (사진 부족 시 finalization 에러)
-- LAYFLAT_HC: 최소 16페이지
-- SLIMALBUM_HC: 최소 20페이지
+### 판형별 스펙 (Sweetbook GET /book-specs 기준)
+| bookSpecUid | 이름 | 크기(mm) | 커버 | 페이지 범위 | 증분 |
+|-------------|------|---------|------|-----------|------|
+| SQUAREBOOK_HC | 정사각 하드커버 | 243×248 | 하드커버 | 24~130 | 2p |
+| PHOTOBOOK_A4_SC | A4 소프트커버 | 210×297 | 소프트커버 | 24~130 | 2p |
+| PHOTOBOOK_A5_SC | A5 소프트커버 | 148×210 | 소프트커버 | 50~200 | 2p |
+
+- 페이지 증분 단위: 항상 2페이지 (24, 26, 28, ...)
+- finalization 시 pageMin 미달 또는 pageMax 초과 → 에러
 - AI 큐레이션 시 이 규칙 반영하여 사진 수 부족 경고 필수
+
+### 가격 공식
+```
+상품금액 = priceBase + ((pageCount - pageMin) / pageIncrement) * pricePerIncrement
+총액 = 상품금액 + 배송비(3,000원) + 포장비 (VAT 10% 포함)
+```
 
 ## book_pages 테이블
 
@@ -107,12 +118,12 @@
 - `UPLOADING` 이후 변경 불가 (Sweetbook API에 이미 책이 생성된 상태)
 - 변경 시도 시 status 검증 필수 → DRAFT 아니면 `ForbiddenException`
 
-### 판형(Book Spec) 목록 및 최소 페이지
-| 판형 ID | 이름 | 최소 페이지 | 비고 |
-|---------|------|------------|------|
-| SQUAREBOOK_HC | 정사각 하드커버 | 24p | 기본 추천 |
-| LAYFLAT_HC | 레이플랫 하드커버 | 16p | 프리미엄 |
-| SLIMALBUM_HC | 슬림앨범 하드커버 | 20p | 경제적 |
+### 판형(Book Spec) 목록 (Sweetbook GET /book-specs 기준)
+| bookSpecUid | 이름 | 크기(mm) | 페이지 범위 | 증분 | 비고 |
+|-------------|------|---------|-----------|------|------|
+| SQUAREBOOK_HC | 정사각 하드커버 | 243×248 | 24~130 | 2p | 기본 추천 |
+| PHOTOBOOK_A4_SC | A4 소프트커버 | 210×297 | 24~130 | 2p | 일기/저널 |
+| PHOTOBOOK_A5_SC | A5 소프트커버 | 148×210 | 50~200 | 2p | 사진 다량 |
 
 ### 판형 변경 시 페이지 재구성 로직
 ```
@@ -153,3 +164,35 @@ Response: { "success": true, "data": { "templateId": "LAYFLAT_HC", "minPages": 1
 - Bull Queue로 비동기 처리: DRAFT → UPLOADING → PROCESSING → READY/FAILED
 - 사진 업로드 2단계: 우리 서버 사진 → Sweetbook에 재업로드 → 반환된 fileName으로 contents 구성
 - finalize 전에는 주문 불가, finalize 후에는 수정 불가
+- finalization 시 표지 spine 두께 자동 조정 (페이지 수 기반)
+
+### Sweetbook 사진 업로드 제한 (POST /books/{uid}/photos)
+| 항목 | 제한 |
+|------|------|
+| 파일 크기 | 최대 50MB/장 |
+| 사진 수 | 최대 200장/책 |
+| 지원 형식 | JPEG, PNG, GIF, BMP, WebP, HEIC, HEIF |
+| Rate Limit | 200 req/min (일반 API와 별도) |
+| 자동 변환 | GIF/WebP→PNG, BMP/HEIC/HEIF→JPG |
+| EXIF | 기본 보존, preserveExif 파라미터로 제어 |
+
+> **참고**: 우리 서버 업로드 제한(10MB, jpg/png/webp)과 Sweetbook 업로드 제한은 별개.
+> 사용자→우리 서버(10MB) → Sharp 처리 → Sweetbook 업로드(50MB)
+
+### 템플릿 시스템
+- 템플릿 종류: `cover`(표지), `content`(내지), `divider`(구분), `publish`(발행)
+- 파라미터: `$$variableName$$` 플레이스홀더로 텍스트/이미지 바인딩
+- 파라미터 타입: `text`(문자열), `file`(이미지), `rowGallery`(사진 배열)
+- 판형별 호환 템플릿만 사용 가능 (bookSpecUid 매칭)
+- 카테고리: diary, album, yearbook, wedding, baby, travel, notice, etc
+
+### 콘텐츠 추가 옵션 (POST /books/{uid}/contents)
+- `breakBefore` 파라미터: `page`(새 페이지), `column`(컬럼 채우기), `none`(연속)
+- 이미지 제공 방식: 파일 업로드, URL, 서버 파일명(photos API로 사전 업로드), 혼합
+
+### 추가 Sweetbook API
+- `GET /books` — Sweetbook 서버 책 목록 조회 (동기화 확인용)
+- `DELETE /books/{uid}` — 책 소프트 삭제 (status → 9)
+- `DELETE /books/{uid}/contents` — 내지 초기화 (테스트용, 표지 유지)
+- `GET /books/{uid}/photos` — 업로드된 사진 목록 조회
+- `DELETE /books/{uid}/photos/{fileName}` — 사진 삭제
