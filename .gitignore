@@ -32,7 +32,4 @@ Thumbs.db
 
 # Claude Code worktrees
 .claude/worktrees/
-docs/
 .claude/
-CLAUDE.md
-docker-compose.yml
