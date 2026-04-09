@@ -85,8 +85,60 @@
 - `share_code`: 랜덤 생성된 공유 링크 코드
 - `/shared/:shareCode`로 비로그인 웹 뷰어 접근
 - 페이지 넘기기 형태의 플립 뷰어 (FE)
-- PDF 다운로드 지원
+- PDF 다운로드: 주문 완료(ORDERED 이상) 상태의 구매자만 가능
 - `is_shared`로 공유 on/off 토글
+
+### 공유 뷰어 접근 정책
+- **제한 없음**: share_code만 있으면 누구나 열람 가능 (비로그인 OK)
+- 별도 비밀번호/만료 설정 없음 (심플한 공유 경험 우선)
+- 방장이 `is_shared = false`로 전환하면 뷰어 접근 차단 (404)
+- 공유 뷰어에서는 읽기 전용 (댓글/다운로드 불가, 플립 뷰만)
+
+### PDF 다운로드 규칙
+- 주문 완료(status: ORDERED 이상) 상태에서만 활성화
+- 해당 포토북의 주문자(orders.orderer_id)만 다운로드 가능
+- 비로그인 공유 뷰어에서는 PDF 다운로드 버튼 미노출
+- Book Preview(10)에서 로그인 사용자 + 주문자 조건 충족 시 버튼 표시
+
+## 판형 변경 규칙
+
+### 변경 가능 시점
+- `DRAFT` 상태에서만 판형 변경 가능
+- `UPLOADING` 이후 변경 불가 (Sweetbook API에 이미 책이 생성된 상태)
+- 변경 시도 시 status 검증 필수 → DRAFT 아니면 `ForbiddenException`
+
+### 판형(Book Spec) 목록 및 최소 페이지
+| 판형 ID | 이름 | 최소 페이지 | 비고 |
+|---------|------|------------|------|
+| SQUAREBOOK_HC | 정사각 하드커버 | 24p | 기본 추천 |
+| LAYFLAT_HC | 레이플랫 하드커버 | 16p | 프리미엄 |
+| SLIMALBUM_HC | 슬림앨범 하드커버 | 20p | 경제적 |
+
+### 판형 변경 시 페이지 재구성 로직
+```
+1. 새 판형의 최소 페이지 수 확인
+2. 현재 book_pages 수와 비교
+   - 현재 페이지 ≥ 새 최소 → 기존 페이지 유지, 경고 없음
+   - 현재 페이지 < 새 최소 → FE에서 경고 표시
+     "현재 {N}페이지입니다. {판형}은 최소 {M}페이지가 필요합니다."
+     (빈 페이지 자동 추가하지 않음, 사용자가 직접 사진 추가)
+3. book_pages의 photo 배치는 그대로 유지 (사진 자체는 판형과 무관)
+4. template_id만 업데이트
+5. Sweetbook API에는 아직 전송하지 않으므로 재업로드 불필요
+```
+
+### 판형 변경 API
+```
+PATCH /books/:id/spec
+Body: { "templateId": "LAYFLAT_HC" }
+Response: { "success": true, "data": { "templateId": "LAYFLAT_HC", "minPages": 16, "currentPages": 20, "isPagesSufficient": true } }
+```
+
+### FE 판형 변경 UI
+- Book Editor(09) 상단 툴바에 현재 판형 표시 + 변경 버튼
+- 변경 클릭 → Book Templates(08) 화면 또는 모달로 판형 재선택
+- 최소 페이지 부족 시 경고 배너 표시 (빨간색, 해제 불가)
+- finalize 버튼은 최소 페이지 충족 시에만 활성화
 
 ## Sweetbook Books API 연동 (필수 순서)
 ```
