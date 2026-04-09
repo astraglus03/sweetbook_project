@@ -5,6 +5,13 @@
 동창회/동호회/가족모임 등 그룹이 각자 찍은 사진을 한 곳에 모아, 클릭 몇 번으로 단체 포토북을 공동 제작/주문하는 협업 포토북 서비스.
 스위트북(Sweetbook) Book Print API의 Books API + Orders API를 활용한다.
 
+## 🎯 플래그십 차별화 기능
+
+1. **개인 포토북 자동 분배 (Personal Book)** — 얼굴 인식(face-api.js) 기반으로 **1개 모임 → 멤버 수만큼의 서로 다른 포토북** 자동 생성. 각자가 주인공인 포토북을 받는다. → 1모임 N권 매출.
+2. **카카오톡 zip 일괄 업로드 (Kakao Import)** — Android 카톡 "대화 내보내기" zip을 드래그앤드롭 → 사진 전체 원본 화질로 일괄 업로드 + 업로더 자동 매칭. 진입 장벽 제로. (iOS는 내보내기 포맷 제약으로 차단 안내)
+
+> 차별화 상세: [docs/domains/books/personal-book.md](./docs/domains/books/personal-book.md), [docs/domains/kakao_import.md](./docs/domains/kakao_import.md)
+
 ## 타겟 고객
 
 - 1차: 동창회/동문회 (연 1회 모임, 기념품 수요)
@@ -33,8 +40,10 @@
 - 인증: JWT + OAuth (Google, Kakao), httpOnly Cookie
 - 유효성 검사: class-validator + class-transformer
 - API 문서: Swagger (OpenAPI)
-- 비동기 작업: Bull Queue (포토북 생성 비동기 처리)
+- 비동기 작업: Bull Queue (포토북 생성, 얼굴 인식, 카톡 import 처리)
 - 파일 업로드: Multer + Sharp (리사이징/최적화)
+- 얼굴 인식: `@vladmandic/face-api` (face-api.js Node.js fork) + `@tensorflow/tfjs-node` + `canvas` — 128차원 embedding 로컬 추출, 비용 0원
+- zip 파싱: `adm-zip` — 카카오톡 대화 내보내기 zip 파일 해제 (Android 전용)
 - 외부 API: Sweetbook Book Print API, OpenAI GPT-4o-mini Vision
 
 ### Frontend

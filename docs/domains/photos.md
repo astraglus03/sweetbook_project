@@ -36,6 +36,79 @@
 }
 ```
 
+## photo_faces 테이블 (얼굴 인식)
+
+| 컬럼 | 타입 | 제약조건 | 설명 |
+|------|------|----------|------|
+| id | UUID | PK, auto-generated | 얼굴 고유 ID |
+| photo_id | UUID | FK → photos.id, NOT NULL | 소속 사진 ID |
+| face_index | INTEGER | NOT NULL | 한 사진 내 얼굴 순번 (0부터) |
+| bbox | JSONB | NOT NULL | 얼굴 영역 `{x,y,w,h}` (0~1 정규화) |
+| embedding | FLOAT[] | NOT NULL | 128차원 face embedding (face-api.js) |
+| matched_user_id | UUID | FK → users.id, NULLABLE | 매칭된 사용자 (nullable) |
+| match_confidence | DECIMAL(3,2) | NULLABLE | 매칭 신뢰도 (0.0~1.0) |
+| created_at | TIMESTAMP | DEFAULT NOW() | 추출일 |
+
+### 얼굴 인식 파이프라인 (Bull Queue)
+
+기존 사진 업로드 파이프라인에 `face-detection` 큐 추가:
+
+```
+사진 업로드 (Multer)
+  ↓
+photo-processing 큐
+  ├─ Sharp 리사이징 (원본/large/medium/thumbnail)
+  ├─ 블러 감지 (Laplacian)
+  ├─ pHash 중복 감지
+  └─ (끝)
+  ↓
+face-detection 큐 (신규)
+  ├─ face-api.js SSD Mobilenet v1 → 얼굴 검출
+  ├─ FaceNet → 128차원 embedding 추출
+  ├─ photo_faces 테이블 insert (얼굴마다 1 row)
+  └─ user_face_anchor와 코사인 유사도 계산 → matched_user_id 자동 매칭 (threshold ≥ 0.6)
+  ↓
+ai-quality 큐 (기존)
+  └─ OpenAI GPT-4o-mini Vision → ai_score
+```
+
+### face-api.js 사용 규칙
+- 라이브러리: `@vladmandic/face-api` (face-api.js의 Node.js 유지 보수 fork, MIT)
+- 의존성: `@tensorflow/tfjs-node` + `canvas` (native binding)
+- 모델: SSD Mobilenet v1 (얼굴 검출) + FaceNet (embedding)
+- 실행 위치: BE에서만 (FE 전송 금지, 임베딩 노출 방지)
+- 모델 파일 경로: `src/external/face-api/models/` (git lfs 또는 초기 배포 시 다운로드)
+- 실행 비용: 로컬, API 호출 0원
+- 처리 속도: 1장당 평균 200ms (M1 기준), 큐 동시성 4로 제한
+
+### 코사인 유사도 계산 (본인 매칭)
+```typescript
+function cosineSimilarity(a: Float32Array, b: Float32Array): number {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+```
+- MVP: 애플리케이션 레벨 계산 (1000장 × 30명 = 30k 연산, 1초 이내)
+- 규모 확장 시: `pgvector` 확장 도입, `embedding vector(128)` 타입으로 마이그레이션
+- threshold: 0.6 (고정). 0.6 미만 = 다른 사람, 0.6~0.75 = 유사, 0.75+ = 확실
+
+### API 엔드포인트
+```
+POST /photos/:photoId/faces/redetect   방장 전용. 얼굴 재검출 트리거 (특정 사진 1장)
+GET  /groups/:groupId/photos/by-face?userId=xxx   특정 사용자 얼굴이 포함된 사진만 조회
+```
+
+### 개인정보 및 안전장치
+- 얼굴 embedding은 **개인정보** 취급 → 로그 출력 금지, 응답에 포함 금지
+- BE 내부에서만 비교 연산, 외부 API 전송 금지
+- 탈퇴 시 user_face_anchor 삭제 + 해당 유저의 photo_faces.matched_user_id = NULL 업데이트
+- EXIF GPS 제거와 병행 처리 (프라이버시)
+
 ## photo_chapters 테이블
 
 | 컬럼 | 타입 | 제약조건 | 설명 |
@@ -66,6 +139,8 @@
 - `idx_photos_phash` — phash (중복 감지 조회용)
 - `idx_photos_ai_score` — ai_score DESC (베스트 추천용)
 - `idx_photo_chapters_group_id` — group_id
+- `idx_photo_faces_photo_id` — photo_id
+- `idx_photo_faces_matched_user` — matched_user_id (특정 사용자 얼굴 조회용)
 
 ## 파일 업로드 제약
 - 허용 확장자: jpg, jpeg, png, webp

@@ -43,18 +43,22 @@
 | 내부 상태 | Sweetbook 코드 | 설명 |
 |-----------|---------------|------|
 | `PENDING` | - (내부 전용) | 배송 정보 입력 대기 (Sweetbook 주문 전) |
+| `SUBMITTING` | - (내부 전용) | Sweetbook POST /orders 호출 중 (멱등성 보호 윈도우) |
 | `PAID` | 20 | 결제 완료 (충전금 차감) |
 | `PDF_READY` | 25 | PDF 생성 완료 |
 | `CONFIRMED` | 30 | 제작 확정 (인쇄일 배정) |
 | `IN_PRODUCTION` | 40 | 제작 진행중 |
-| `PRODUCTION_COMPLETE` | 50 | 제작 완료 |
+| `ITEM_COMPLETED` | 45 | 개별 아이템 제작 완료 (다중 item 주문 시) |
+| `PRODUCTION_COMPLETE` | 50 | 전체 제작 완료 |
 | `SHIPPED` | 60 | 발송 완료 |
 | `DELIVERED` | 70 | 배송 완료 |
 | `CANCELLED` | 80 | 취소됨 |
 | `CANCELLED_REFUND` | 81 | 환불 완료 |
 | `ERROR` | 90 | 오류 발생 |
 
-> **주의**: Sweetbook API는 주문 생성 즉시 `PAID(20)` 상태. `PENDING`은 우리 서비스 내부에서 배송정보 수집 중인 상태로만 사용.
+> **주의**: Sweetbook API는 주문 생성 즉시 `PAID(20)` 상태. `PENDING`/`SUBMITTING`은 우리 서비스 내부에서만 사용.
+> - `PENDING`: 배송정보 수집 중 (Sweetbook 호출 전)
+> - `SUBMITTING`: Sweetbook API 호출 진행 중. 멱등성 키 보호 구간. 동일 요청 재진입 시 상태 확인만 하고 return.
 
 ## 관계
 - `OrderGroup` 1:1 `Book` — 주문 그룹이 연결된 포토북
@@ -82,11 +86,35 @@
 6. 방장이 최종 확인 → OrderGroup status: CONFIRMED
 7. 멤버별로 Sweetbook POST /orders 호출 (Idempotency-Key 필수!)
    → 성공: Order status: PAID + sweetbook_order_id 저장
-   → 실패(402): 충전금 부족 에러 → 사용자에게 안내
+   → 실패(402): 충전금 부족 에러 → balance 정보 파싱 후 사용자 안내
 8. Webhook으로 상태 변경 수신 (또는 GET /orders/{orderUid} 폴링)
    PAID(20) → PDF_READY(25) → CONFIRMED(30) → IN_PRODUCTION(40)
    → PRODUCTION_COMPLETE(50) → SHIPPED(60) → DELIVERED(70)
 ```
+
+## 402 Payment Required — 충전금 부족 응답
+
+Sweetbook은 잔액 부족 시 에러 본문에 상세 정보를 포함한다. 우리는 이걸 파싱해서 사용자에게 **정확한 부족 금액**을 안내해야 한다.
+
+```json
+// POST /orders 실패 응답 예시 (HTTP 402)
+{
+  "success": false,
+  "errors": [{
+    "code": "INSUFFICIENT_CREDITS",
+    "message": "Insufficient credit balance",
+    "required": 28500,
+    "current": 15000,
+    "currency": "KRW"
+  }]
+}
+```
+
+**서비스 처리**:
+- `ExternalApiException`으로 래핑하되 `balance` 필드 보존
+- FE에 `ORDER_INSUFFICIENT_CREDITS` 에러코드 + `{ required, current, shortfall }` 데이터 전달
+- 사용자 화면: "충전금이 **13,500원** 부족해요" (shortfall = required - current)
+- 주문 생성 전 `GET /credits`로 **사전 차단**하는 게 1차 방어선, 402는 2차 fallback
 
 ## Sweetbook Orders API 상세
 
@@ -110,12 +138,27 @@
 }
 ```
 
+**필드 제약 (공식 문서 기준):**
+- `items[].quantity`: **1~100** (범위 초과 시 400)
+- `items[].bookUid`: FINALIZED 상태의 책만 허용 (DRAFT 상태는 400)
+- `externalRef`: 최대 100자, 우리 서비스의 `orders.id` UUID 전달 (웹훅 매칭용)
+- `shipping`: 모든 필드 필수 (`memo`, `address2` 제외)
+
 ### POST /orders/estimate — 가격 견적
 - items[].bookUid + items[].quantity로 견적 조회
+- FINALIZED 상태 책만 허용
+
+### GET /orders — 주문 목록 조회
+**필터 파라미터**:
+- `status` — 주문 상태 코드 (20, 25, 30, ...)
+- `from` / `to` — 생성일 기준 날짜 범위 (ISO 8601)
+- `limit` / `offset` — 페이지네이션 (최대 100)
+
+**용도**: 관리자 대시보드, 우리 DB와 Sweetbook 서버 동기화 cron
 
 ### GET /orders/{orderUid} — 주문 상태 조회
 - 폴링 방식 상태 추적 (웹훅 fallback)
-- 응답: orderStatus, items[].itemStatus, tracking 정보
+- 응답: `orderStatus`, `items[].itemStatus`, `tracking` 정보 포함
 
 ### POST /orders/{orderUid}/cancel — 주문 취소
 - **PAID(20) 또는 PDF_READY(25) 상태에서만 가능**
@@ -132,6 +175,37 @@
 - Sweetbook API는 주문 1개 = 배송지 1개
 - 멤버마다 다른 주소로 받으려면 멤버 수만큼 Sweetbook 주문 각각 생성
 - OrderGroup이 이들을 묶는 상위 엔티티
+
+## PERSONAL Book 주문 흐름 (단순화)
+
+공동 포토북(SHARED)의 `OrderGroup 1 → Order N` 구조와 달리, 개인 포토북은 owner 본인 1명만 주문하므로 구조가 단순화된다. 단, 코드 통일성을 위해 OrderGroup 엔티티는 유지한다.
+
+```
+PERSONAL Book (book_type='PERSONAL', owner_user_id=m)
+  ↓
+OrderGroup (initiated_by=m, book 1:1)
+  ↓
+Order 1개
+  - orderer_id = m (owner와 동일)
+  - quantity ≥ 1 (owner가 친구 선물용으로 quantity 증가 가능, 1~100 제한)
+  - recipient_*는 owner가 직접 입력
+```
+
+### 권한 규칙
+- PERSONAL Book의 OrderGroup 생성/조회/결제는 **owner_user_id 본인만** 가능
+- Guard: `@PersonalBookOwnerGuard` 적용 (상위 Book 소유권 검증)
+- 다른 멤버가 이 OrderGroup에 배송지 입력하려 시도 시 `ForbiddenException`
+
+### 단순화된 API
+```
+POST /books/:bookId/orders    PERSONAL Book 주문 (quantity + shipping)
+GET  /books/:bookId/orders    본인 주문 내역 조회 (PERSONAL인 경우 1개만 반환)
+```
+
+### quantity 활용
+- Sweetbook `items[].quantity`: 1~100 제한 (공식 문서 기준)
+- 단일 배송지로 여러 권 인쇄 가능 ("친구 3명에게 선물" → quantity=3)
+- 여러 배송지로 나눠 보내려면 별도 OrderGroup 생성 (각각 1권씩)
 
 ## 취소 규칙
 - `PAID(20)`, `PDF_READY(25)` 상태에서만 취소 가능 (Sweetbook API 기준)

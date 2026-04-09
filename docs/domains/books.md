@@ -1,5 +1,9 @@
 # Books 도메인 ERD
 
+> **하위 문서:**
+> - [books/personal-book.md](./books/personal-book.md) — 개인 포토북 (얼굴 인식 기반 자동 생성)
+> - [books/book-specs.md](./books/book-specs.md) — 판형 3종 상세 스펙 + 디자인 참조
+
 ## books 테이블
 
 | 컬럼 | 타입 | 제약조건 | 설명 |
@@ -8,10 +12,14 @@
 | group_id | UUID | FK → groups.id, NOT NULL | 소속 모임 ID |
 | title | VARCHAR(100) | NOT NULL | 포토북 제목 |
 | subtitle | VARCHAR(200) | NULLABLE | 포토북 부제 |
+| book_type | ENUM | NOT NULL, DEFAULT 'SHARED' | 포토북 종류 (SHARED / PERSONAL) |
+| owner_user_id | UUID | FK → users.id, NULLABLE | PERSONAL일 때 소유자 (SHARED는 NULL) |
 | template_id | VARCHAR(50) | NOT NULL | Sweetbook 템플릿 ID |
+| book_spec_uid | VARCHAR(50) | NOT NULL | Sweetbook 판형 UID |
 | status | ENUM | NOT NULL, DEFAULT 'DRAFT' | 포토북 상태 |
 | sweetbook_book_id | VARCHAR(100) | NULLABLE, UNIQUE | Sweetbook API 응답 book ID |
-| cover_photo_id | UUID | FK → photos.id, NULLABLE | 표지 사진 ID (투표 결과) |
+| sweetbook_external_ref | VARCHAR(100) | NULLABLE | Sweetbook POST /books의 externalRef (내부 book.id 전달) |
+| cover_photo_id | UUID | FK → photos.id, NULLABLE | 표지 사진 ID (투표 결과 or owner 선택) |
 | page_count | INTEGER | DEFAULT 0 | 총 페이지 수 |
 | share_code | VARCHAR(20) | UNIQUE, NULLABLE | 디지털 공유 링크 코드 |
 | is_shared | BOOLEAN | DEFAULT false | 디지털 공유 활성화 여부 |
@@ -19,30 +27,34 @@
 | created_at | TIMESTAMP | DEFAULT NOW() | 생성일 |
 | updated_at | TIMESTAMP | DEFAULT NOW() | 수정일 |
 
+### book_type ENUM
+- `SHARED` — 공동 포토북. 모임 전원이 열람, 방장(또는 공동 편집자)이 편집. `owner_user_id = NULL`. 기존 설계 그대로.
+- `PERSONAL` — 개인 포토북. 얼굴 인식 기반 자동 생성. `owner_user_id` 필수. **본인만 열람/편집/주문/다운로드**.
+
+> PERSONAL Book의 자동 생성 파이프라인, 권한 규칙, 상태 흐름은 [books/personal-book.md](./books/personal-book.md) 참조.
+
 ### status ENUM 값
+
+**SHARED Book (공동 포토북):**
 - `DRAFT` — 편집중 (페이지 구성 중)
+- `VOTING` — 표지 투표 진행 중
 - `UPLOADING` — 사진을 Sweetbook 서버에 업로드 중
 - `PROCESSING` — 표지/내지 추가 + finalization 진행 중
 - `READY` — finalization 완료 (주문 가능, 수정 불가)
 - `ORDERED` — 주문됨
 - `FAILED` — 생성 실패
 
-### 판형별 스펙 (Sweetbook GET /book-specs 기준)
-| bookSpecUid | 이름 | 크기(mm) | 커버 | 페이지 범위 | 증분 |
-|-------------|------|---------|------|-----------|------|
-| SQUAREBOOK_HC | 정사각 하드커버 | 243×248 | 하드커버 | 24~130 | 2p |
-| PHOTOBOOK_A4_SC | A4 소프트커버 | 210×297 | 소프트커버 | 24~130 | 2p |
-| PHOTOBOOK_A5_SC | A5 소프트커버 | 148×210 | 소프트커버 | 50~200 | 2p |
+**PERSONAL Book (개인 포토북, 얼굴 인식 기반):**
+- `AUTO_GENERATING` — 얼굴 매칭 + 자동 배치 중 (Bull Queue)
+- `READY_TO_REVIEW` — owner 리뷰 대기
+- `EDITING` — owner 직접 수정 중
+- `UPLOADING`, `PROCESSING`, `FINALIZED`, `ORDERED`, `FAILED` — SHARED와 공통
 
-- 페이지 증분 단위: 항상 2페이지 (24, 26, 28, ...)
-- finalization 시 pageMin 미달 또는 pageMax 초과 → 에러
-- AI 큐레이션 시 이 규칙 반영하여 사진 수 부족 경고 필수
+> PERSONAL 상세 흐름은 [books/personal-book.md](./books/personal-book.md) 참조.
 
-### 가격 공식
-```
-상품금액 = priceBase + ((pageCount - pageMin) / pageIncrement) * pricePerIncrement
-총액 = 상품금액 + 배송비(3,000원) + 포장비 (VAT 10% 포함)
-```
+### 판형 및 가격
+
+판형 3종(`SQUAREBOOK_HC`, `PHOTOBOOK_A4_SC`, `PHOTOBOOK_A5_SC`)의 상세 스펙, 가격 공식, 변경 규칙, 템플릿 시스템은 [books/book-specs.md](./books/book-specs.md)에 분리되어 있다.
 
 ## book_pages 테이블
 
@@ -69,16 +81,19 @@
 ## 관계
 - `Book` N:1 `Group` — 포토북이 속한 모임
 - `Book` N:1 `User` (created_by) — 포토북 생성자
+- `Book` N:1 `User` (owner_user_id) — PERSONAL Book 소유자 (SHARED는 NULL)
 - `Book` N:1 `Photo` (cover_photo) — 표지 사진
 - `Book` 1:N `BookPage` — 포토북 페이지들
 - `BookPage` N:1 `Photo` — 페이지에 배치된 사진
-- `Book` 1:1 `Order` — 포토북의 주문
-- `CoverVote` N:1 `Group` — 투표가 속한 모임
+- `Book` 1:1 `OrderGroup` — 포토북의 주문 묶음
+- `CoverVote` N:1 `Group` — 투표가 속한 모임 (SHARED Book 전용)
 - `CoverVote` N:1 `Photo` — 투표 대상 사진
 - `CoverVote` N:1 `User` — 투표한 사용자
 
 ## 인덱스
 - `idx_books_group_id` — group_id
+- `idx_books_owner_user_id` — owner_user_id (PERSONAL Book 조회용)
+- `idx_books_group_owner_type` — (group_id, owner_user_id, book_type) (그룹 내 특정 사용자 PERSONAL Book 조회)
 - `idx_books_sweetbook_book_id` — sweetbook_book_id (UNIQUE)
 - `idx_books_share_code` — share_code (UNIQUE)
 - `idx_book_pages_book_id` — book_id
@@ -111,88 +126,146 @@
 - 비로그인 공유 뷰어에서는 PDF 다운로드 버튼 미노출
 - Book Preview(10)에서 로그인 사용자 + 주문자 조건 충족 시 버튼 표시
 
-## 판형 변경 규칙
-
-### 변경 가능 시점
-- `DRAFT` 상태에서만 판형 변경 가능
-- `UPLOADING` 이후 변경 불가 (Sweetbook API에 이미 책이 생성된 상태)
-- 변경 시도 시 status 검증 필수 → DRAFT 아니면 `ForbiddenException`
-
-### 판형(Book Spec) 목록 (Sweetbook GET /book-specs 기준)
-| bookSpecUid | 이름 | 크기(mm) | 페이지 범위 | 증분 | 비고 |
-|-------------|------|---------|-----------|------|------|
-| SQUAREBOOK_HC | 정사각 하드커버 | 243×248 | 24~130 | 2p | 기본 추천 |
-| PHOTOBOOK_A4_SC | A4 소프트커버 | 210×297 | 24~130 | 2p | 일기/저널 |
-| PHOTOBOOK_A5_SC | A5 소프트커버 | 148×210 | 50~200 | 2p | 사진 다량 |
-
-### 판형 변경 시 페이지 재구성 로직
-```
-1. 새 판형의 최소 페이지 수 확인
-2. 현재 book_pages 수와 비교
-   - 현재 페이지 ≥ 새 최소 → 기존 페이지 유지, 경고 없음
-   - 현재 페이지 < 새 최소 → FE에서 경고 표시
-     "현재 {N}페이지입니다. {판형}은 최소 {M}페이지가 필요합니다."
-     (빈 페이지 자동 추가하지 않음, 사용자가 직접 사진 추가)
-3. book_pages의 photo 배치는 그대로 유지 (사진 자체는 판형과 무관)
-4. template_id만 업데이트
-5. Sweetbook API에는 아직 전송하지 않으므로 재업로드 불필요
-```
-
-### 판형 변경 API
-```
-PATCH /books/:id/spec
-Body: { "templateId": "LAYFLAT_HC" }
-Response: { "success": true, "data": { "templateId": "LAYFLAT_HC", "minPages": 16, "currentPages": 20, "isPagesSufficient": true } }
-```
-
-### FE 판형 변경 UI
-- Book Editor(09) 상단 툴바에 현재 판형 표시 + 변경 버튼
-- 변경 클릭 → Book Templates(08) 화면 또는 모달로 판형 재선택
-- 최소 페이지 부족 시 경고 배너 표시 (빨간색, 해제 불가)
-- finalize 버튼은 최소 페이지 충족 시에만 활성화
-
 ## Sweetbook Books API 연동 (필수 순서)
 ```
 1. GET /book-specs → 판형 선택
-2. GET /templates → 템플릿 선택
-3. POST /books → 빈 책 생성 (sweetbook_book_id 저장)
-4. POST /books/{uid}/photos → 사진 업로드 (우리 서버 → Sweetbook)
-5. POST /books/{uid}/cover → 표지 추가 (투표 결과 사진)
-6. POST /books/{uid}/contents (반복) → 내지 페이지 추가
-7. POST /books/{uid}/finalization → 최종화 (이후 수정 불가!)
+2. GET /templates?bookSpecUid={uid} → 템플릿 선택
+3. POST /books → 빈 책 생성 (DRAFT 상태, sweetbook_book_id 저장)
+4. POST /books/{uid}/photos → 사진 사전 업로드 (반환된 fileName 저장)
+5. POST /books/{uid}/cover → 표지 1회 추가 (templateUid + 파라미터)
+6. POST /books/{uid}/contents → 내지 추가 (반복 호출)
+7. POST /books/{uid}/finalization → 최종화 (DRAFT → FINALIZED)
 ```
-- Bull Queue로 비동기 처리: DRAFT → UPLOADING → PROCESSING → READY/FAILED
-- 사진 업로드 2단계: 우리 서버 사진 → Sweetbook에 재업로드 → 반환된 fileName으로 contents 구성
-- finalize 전에는 주문 불가, finalize 후에는 수정 불가
-- finalization 시 표지 spine 두께 자동 조정 (페이지 수 기반)
 
-### Sweetbook 사진 업로드 제한 (POST /books/{uid}/photos)
-| 항목 | 제한 |
-|------|------|
-| 파일 크기 | 최대 50MB/장 |
-| 사진 수 | 최대 200장/책 |
+### 🔑 DRAFT 전용 작업
+4, 5, 6, 사진 삭제, 내지 초기화 등 **모든 편집 작업은 DRAFT 상태에서만** 허용된다. Finalized 책에 편집 API 호출 시 400 반환.
+
+### 사진 사전 업로드: 공식 선택, 우리는 필수
+공식 문서상 사진 업로드는 **선택** (cover/contents 호출 시 inline 파일 업로드도 가능). 하지만 우리 서비스는:
+- 그룹당 200장 대량 처리
+- `rowGallery` 타입 템플릿에서 동일 사진 여러 페이지 재참조
+- Bull Queue로 업로드 병렬화
+
+이 세 가지 이유로 **사전 업로드 필수**로 간주한다.
+
+### Bull Queue 비동기 상태 전이
+```
+DRAFT → UPLOADING (사진 업로드 중)
+      → PROCESSING (표지/내지 추가 + finalization 중)
+      → READY (SHARED) / FINALIZED (PERSONAL)  ← 주문 가능
+      → ORDERED
+      → FAILED (어느 단계든 실패 시)
+```
+
+- finalize 전에는 주문 불가, finalize 후에는 편집 불가
+- finalization 시 표지 spine 두께가 페이지 수 기반으로 자동 조정됨
+
+### POST /books 요청 필드 (공식 문서 기반)
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| `title` | ✅ | 책 제목 (1~255자) |
+| `bookSpecUid` | ✅ | 판형 UID (ex. `SQUAREBOOK_HC`) |
+| `specProfileUid` | ⬜ | 판형 세부 프로필 (종이 재질 등, 미사용 시 기본) |
+| `externalRef` | ⬜ | 우리 서비스의 내부 `books.id` UUID 전달 (최대 100자). 웹훅 상관 매칭 및 조회 필터에 활용 |
+
+→ `externalRef`에 내부 `books.id`를 넣고, 응답의 `bookUid`를 `sweetbook_book_id` 컬럼에 저장. 양방향 추적 가능.
+
+### GET /books 필터 파라미터
+- `bookUid` — 단건 조회
+- `status` — `draft` / `finalized` 필터
+- `limit`, `offset` — 페이지네이션
+- **용도:** 우리 DB와 Sweetbook 서버 상태 동기화 검증 (주기적 cron)
+
+### POST /books/{uid}/photos — 사진 사전 업로드
+
+**요청:** `multipart/form-data`, 파일 필드
+
+**응답 (공식):**
+```json
+{
+  "success": true,
+  "data": { "fileName": "photo250105143052123.JPG" },
+  "message": "Photo uploaded successfully"
+}
+```
+
+| 항목 | 값 |
+|------|---|
+| 파일 크기 | 최대 **50MB/장** |
+| 사진 수 | 최대 **200장/책** |
 | 지원 형식 | JPEG, PNG, GIF, BMP, WebP, HEIC, HEIF |
-| Rate Limit | 200 req/min (일반 API와 별도) |
+| Rate Limit | **200 req/min** (업로드 전용, 일반 API와 별도) |
 | 자동 변환 | GIF/WebP→PNG, BMP/HEIC/HEIF→JPG |
-| EXIF | 기본 보존, preserveExif 파라미터로 제어 |
+| EXIF | 기본 보존, `preserveExif` 파라미터로 제어 |
+| 상태 제약 | **DRAFT에서만 가능**, FINALIZED에서 차단 |
+| 중복 감지 | Sweetbook이 **MD5 해시**로 자동 dedup — 동일 파일 재업로드 시 기존 `fileName` 반환 |
+
+- 응답의 `fileName`은 `photoNNNNNNNNNNNNNN.JPG` 형식(예: `photo250105143052123.JPG`)으로, 이후 `contents`/`cover`에서 `$upload` 또는 서버 파일명 참조로 사용.
+- 우리 서버 `photos` 테이블에 `sweetbook_file_name` 컬럼으로 저장 권장.
 
 > **참고**: 우리 서버 업로드 제한(10MB, jpg/png/webp)과 Sweetbook 업로드 제한은 별개.
-> 사용자→우리 서버(10MB) → Sharp 처리 → Sweetbook 업로드(50MB)
+> 사용자 → 우리 서버(10MB) → Sharp 처리 → Sweetbook 업로드(50MB)
 
-### 템플릿 시스템
-- 템플릿 종류: `cover`(표지), `content`(내지), `divider`(구분), `publish`(발행)
-- 파라미터: `$$variableName$$` 플레이스홀더로 텍스트/이미지 바인딩
-- 파라미터 타입: `text`(문자열), `file`(이미지), `rowGallery`(사진 배열)
-- 판형별 호환 템플릿만 사용 가능 (bookSpecUid 매칭)
-- 카테고리: diary, album, yearbook, wedding, baby, travel, notice, etc
+> 템플릿 시스템(카테고리, 파라미터, bookSpecUid 매칭 규칙)은 [books/book-specs.md](./books/book-specs.md) 참조.
 
-### 콘텐츠 추가 옵션 (POST /books/{uid}/contents)
-- `breakBefore` 파라미터: `page`(새 페이지), `column`(컬럼 채우기), `none`(연속)
-- 이미지 제공 방식: 파일 업로드, URL, 서버 파일명(photos API로 사전 업로드), 혼합
+### POST /books/{uid}/cover — 표지 추가
+
+**제약**: 책 1권당 **표지 1개만 허용** (중복 POST 시 에러). 바꾸려면 DRAFT 상태에서 새 책을 만들어야 함 (또는 cover DELETE 후 재추가 — 공식 엔드포인트 미확인).
+
+**요청 파라미터**:
+- `templateUid` (필수): `templateKind = cover`인 템플릿
+- `parameters` (JSON): 템플릿의 `$$variableName$$` 바인딩 값
+- 이미지 전달: 파일 업로드 / URL / 서버 파일명(`$upload` placeholder)
+
+**응답 (201)**:
+```json
+{
+  "success": true,
+  "data": { "result": "inserted" },
+  "message": "Cover created successfully"
+}
+```
+
+### POST /books/{uid}/contents — 내지 추가
+
+여러 번 호출로 페이지를 쌓는다.
+
+**파라미터**:
+- `templateUid` (필수): `templateKind = content | divider | publish`
+- `parameters` (JSON): 템플릿 바인딩
+- `breakBefore` (쿼리):
+  - `page` — 새 페이지에서 시작 (divider/publish 기본값)
+  - `column` — 새 컬럼에서 시작
+  - `none` — 이전 내용에 이어서 (content 기본값)
+- 이미지 전달: 파일, URL, 서버 파일명, 또는 `rowGallery` 배열 혼합
+
+**응답 분기**:
+| HTTP | `data.result` | 의미 |
+|------|---------------|------|
+| **201 Created** | `"inserted"` | 새 페이지 추가됨 |
+| **200 OK** | `"updated"` | 같은 페이지의 기존 콘텐츠 업데이트 |
+
+→ 코드에서 두 가지 응답 모두 성공으로 처리할 것. 200을 에러로 오인 금지.
+
+### POST /books/{uid}/finalization — 최종화
+
+**전제 조건 (모두 충족 필수)**:
+1. Book status == DRAFT
+2. **Cover 1개 + Contents 1개 이상** 둘 다 있어야 함
+3. 페이지 수 검증 통과:
+   - `actualPageCount >= pageMin`
+   - `actualPageCount <= pageMax`
+   - `(actualPageCount - pageMin) % pageIncrement == 0`
+
+**idempotent 동작**: 이미 FINALIZED 상태인 책에 호출해도 **200 OK** 반환 (에러 아님). → 우리 Bull Queue 재시도 로직 설계 시 안전.
+
+**실패 시**: 400 + 어느 조건 실패인지 `fieldErrors`로 안내.
+
+**이후 금지**: cover/contents/photos 전부 수정 불가, 책 삭제만 가능 (`DELETE /books/{uid}`).
 
 ### 추가 Sweetbook API
-- `GET /books` — Sweetbook 서버 책 목록 조회 (동기화 확인용)
+- `GET /books` — 필터: `bookUid`, `status`(draft/finalized), `from`, `to`, `limit`, `offset` → Sweetbook↔DB 동기화 cron
 - `DELETE /books/{uid}` — 책 소프트 삭제 (status → 9)
-- `DELETE /books/{uid}/contents` — 내지 초기화 (테스트용, 표지 유지)
+- `DELETE /books/{uid}/contents` — 내지 전체 초기화 (표지 유지, 테스트/복구용)
 - `GET /books/{uid}/photos` — 업로드된 사진 목록 조회
-- `DELETE /books/{uid}/photos/{fileName}` — 사진 삭제
+- `DELETE /books/{uid}/photos/{fileName}` — 개별 사진 삭제 (DRAFT 전용)
