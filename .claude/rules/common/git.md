@@ -8,7 +8,6 @@
   - `feat(auth): JWT refresh token 구현`
   - `fix(orders): 주문 취소 시 상태 검증 누락 수정`
   - `chore: Docker Compose 설정 추가`
-  - `docs: ERD 문서 업데이트`
 
 ## 브랜치 전략
 - `main`: 프로덕션 배포 브랜치
@@ -19,9 +18,8 @@
 
 ## 커밋 금지 항목
 - `.env` 파일 (API Key, 비밀번호 포함)
-- `node_modules/`
-- `dist/`, `build/`
-- IDE 설정 파일 (`.idea/`, `.vscode/` 등)
+- `node_modules/`, `dist/`, `build/`
+- IDE 설정 파일 (`.idea/`, `.vscode/`)
 - 로그 파일
 
 ## 반드시 커밋할 항목
