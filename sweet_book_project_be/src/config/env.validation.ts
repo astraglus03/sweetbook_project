@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsOptional, IsString, validateSync } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, validateSync } from 'class-validator';
 
 class EnvVariables {
   @IsOptional()
@@ -12,39 +12,106 @@ class EnvVariables {
 
   @IsOptional()
   @IsString()
-  DB_HOST?: string;
+  CORS_ORIGIN?: string;
+
+  // PostgreSQL
+  @IsNotEmpty()
+  @IsString()
+  DB_HOST: string;
+
+  @IsNotEmpty()
+  @IsString()
+  DB_PORT: string;
+
+  @IsNotEmpty()
+  @IsString()
+  DB_USER: string;
+
+  @IsNotEmpty()
+  @IsString()
+  DB_PASSWORD: string;
+
+  @IsNotEmpty()
+  @IsString()
+  DB_NAME: string;
+
+  // Redis
+  @IsNotEmpty()
+  @IsString()
+  REDIS_HOST: string;
+
+  @IsNotEmpty()
+  @IsString()
+  REDIS_PORT: string;
 
   @IsOptional()
   @IsString()
-  DB_PORT?: string;
+  REDIS_PASSWORD?: string;
+
+  // JWT
+  @IsNotEmpty()
+  @IsString()
+  JWT_SECRET: string;
 
   @IsOptional()
   @IsString()
-  DB_USER?: string;
+  JWT_ACCESS_EXPIRES?: string;
 
   @IsOptional()
   @IsString()
-  DB_PASSWORD?: string;
+  JWT_REFRESH_EXPIRES?: string;
+
+  // OAuth - Google
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_ID?: string;
 
   @IsOptional()
   @IsString()
-  DB_NAME?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 
   @IsOptional()
   @IsString()
-  REDIS_HOST?: string;
+  GOOGLE_CALLBACK_URL?: string;
+
+  // OAuth - Kakao
+  @IsOptional()
+  @IsString()
+  KAKAO_CLIENT_ID?: string;
 
   @IsOptional()
   @IsString()
-  REDIS_PORT?: string;
+  KAKAO_CLIENT_SECRET?: string;
 
   @IsOptional()
   @IsString()
-  JWT_SECRET?: string;
+  KAKAO_CALLBACK_URL?: string;
 
+  @IsOptional()
+  @IsString()
+  OAUTH_SUCCESS_REDIRECT?: string;
+
+  @IsOptional()
+  @IsString()
+  OAUTH_FAILURE_REDIRECT?: string;
+
+  // Sweetbook
   @IsOptional()
   @IsString()
   SWEETBOOK_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  SWEETBOOK_BASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  SWEETBOOK_WEBHOOK_SECRET?: string;
+
+  // OpenAI
+  @IsOptional()
+  @IsString()
+  OPENAI_API_KEY?: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>): EnvVariables => {

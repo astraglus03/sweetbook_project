@@ -12,6 +12,7 @@ export const typeOrmConfig = (
   database: configService.get<string>('DB_NAME', 'sweetbook'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+  migrationsRun: false,
   synchronize: false,
   logging: configService.get<string>('NODE_ENV') !== 'production',
 });
