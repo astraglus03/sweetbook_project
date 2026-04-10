@@ -44,10 +44,10 @@ export function CreateGroupModal({ isOpen, onClose }) {
         aria-label="닫기"
       />
       <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-gray-900 mb-5">모임 만들기</h2>
+        <h2 className="text-lg font-bold text-ink mb-5">모임 만들기</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="name" className="block text-[13px] font-medium text-ink mb-1">
               모임 이름 <span className="text-red-500">*</span>
             </label>
             <input
@@ -59,11 +59,11 @@ export function CreateGroupModal({ isOpen, onClose }) {
               value={form.name}
               onChange={handleChange}
               placeholder="예: 2025 동창회"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
             />
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block text-[13px] font-medium text-ink mb-1">
               설명
             </label>
             <textarea
@@ -74,12 +74,12 @@ export function CreateGroupModal({ isOpen, onClose }) {
               rows={3}
               maxLength={1000}
               placeholder="모임에 대한 간단한 설명"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full px-3.5 py-3 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="eventDate" className="block text-[13px] font-medium text-ink mb-1">
                 모임 날짜
               </label>
               <input
@@ -88,11 +88,11 @@ export function CreateGroupModal({ isOpen, onClose }) {
                 type="date"
                 value={form.eventDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
             <div>
-              <label htmlFor="uploadDeadline" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="uploadDeadline" className="block text-[13px] font-medium text-ink mb-1">
                 업로드 마감
               </label>
               <input
@@ -101,7 +101,7 @@ export function CreateGroupModal({ isOpen, onClose }) {
                 type="date"
                 value={form.uploadDeadline}
                 onChange={handleChange}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
           </div>
@@ -109,14 +109,14 @@ export function CreateGroupModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-ink-sub bg-warm-bg rounded-full hover:bg-warm-border transition-colors"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={!form.name.trim() || createGroup.isPending}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createGroup.isPending ? '생성 중...' : '만들기'}
             </button>

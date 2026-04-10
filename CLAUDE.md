@@ -159,6 +159,14 @@ sweet_book_project_fe/src/
 - 도메인별 ERD 문서는 `/docs/domains/` 디렉토리에 위치
 - ERD 설계 시 해당 디렉토리의 문서를 반드시 참조할 것
 - 새로운 도메인 추가 시 ERD 문서도 함께 생성
+- **도메인 개발 시 반드시 해당 ERD 문서를 먼저 읽고 엔티티/API 설계에 반영**
+
+## UI 디자인 참조 (Pencil .pen 파일)
+- 스토리보드: `docs/designs/roupbook-storyboard.pen`
+- **.pen 파일은 반드시 Pencil MCP 도구(`batch_get`, `get_editor_state` 등)로 읽을 것** — `Read`/`Grep` 도구로 읽기 금지
+- FE 페이지/컴포넌트 개발 시 pen 스토리보드의 해당 프레임을 먼저 확인하고 디자인을 맞출 것
+- 디자인 시스템: brand `#D4916E`, warm-bg `#F8F5F0`, ink `#1A1A1A`, font-display `Playfair Display`, font-sans `Inter`
+- 데스크톱 + 모바일 프레임이 각각 존재 — 반응형 구현 시 양쪽 모두 참조
 
 ## README 요구사항 (마감 전 필수 작성)
 - 서비스 소개 (한 문장 + 타겟 고객 + 주요 기능)

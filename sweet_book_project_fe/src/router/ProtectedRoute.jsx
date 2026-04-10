@@ -1,5 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMe } from '../features/auth/hooks/useAuth';
+import { Header } from '../components/layout/Header';
+import { BottomTab } from '../components/layout/BottomTab';
 
 export function ProtectedRoute() {
   const location = useLocation();
@@ -7,8 +9,8 @@ export function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        로딩 중...
+      <div className="min-h-screen flex items-center justify-center bg-warm-bg">
+        <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -17,5 +19,13 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  return <Outlet />;
+  return (
+    <div className="min-h-screen bg-warm-bg font-sans">
+      <Header />
+      <main className="pb-16 lg:pb-0">
+        <Outlet />
+      </main>
+      <BottomTab />
+    </div>
+  );
 }

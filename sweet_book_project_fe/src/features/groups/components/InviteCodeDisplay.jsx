@@ -23,16 +23,16 @@ export function InviteCodeDisplay({ inviteCode }) {
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <h4 className="text-sm font-medium text-gray-700 mb-2">초대 링크</h4>
+    <div className="bg-warm-bg rounded-xl p-4">
+      <h4 className="text-sm font-medium text-ink-sub mb-2">초대 링크</h4>
       <div className="flex items-center gap-2">
-        <div className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 truncate">
+        <div className="flex-1 px-3 py-2 bg-white border border-warm-border rounded-lg text-sm text-ink-sub truncate">
           {inviteLink}
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex-shrink-0 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+          className="flex-shrink-0 px-3 py-2 text-sm font-medium text-brand bg-brand-light rounded-lg hover:bg-brand/20 transition-colors"
         >
           {copied ? '복사됨!' : '복사'}
         </button>

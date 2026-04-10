@@ -56,7 +56,7 @@ export function GroupSettings({ group }) {
       {isEditing ? (
         <div className="space-y-3">
           <div>
-            <label htmlFor="settings-name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="settings-name" className="block text-[13px] font-medium text-ink mb-1">
               모임 이름
             </label>
             <input
@@ -66,11 +66,11 @@ export function GroupSettings({ group }) {
               value={form.name}
               onChange={handleChange}
               maxLength={100}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
             />
           </div>
           <div>
-            <label htmlFor="settings-description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="settings-description" className="block text-[13px] font-medium text-ink mb-1">
               설명
             </label>
             <textarea
@@ -80,12 +80,12 @@ export function GroupSettings({ group }) {
               onChange={handleChange}
               rows={3}
               maxLength={1000}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full px-3.5 py-3 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="settings-eventDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="settings-eventDate" className="block text-[13px] font-medium text-ink mb-1">
                 모임 날짜
               </label>
               <input
@@ -94,11 +94,11 @@ export function GroupSettings({ group }) {
                 type="date"
                 value={form.eventDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
             <div>
-              <label htmlFor="settings-uploadDeadline" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="settings-uploadDeadline" className="block text-[13px] font-medium text-ink mb-1">
                 업로드 마감
               </label>
               <input
@@ -107,7 +107,7 @@ export function GroupSettings({ group }) {
                 type="date"
                 value={form.uploadDeadline}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
           </div>
@@ -115,7 +115,7 @@ export function GroupSettings({ group }) {
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="flex-1 px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-ink-sub bg-warm-bg rounded-full hover:bg-warm-border transition-colors"
             >
               취소
             </button>
@@ -123,7 +123,7 @@ export function GroupSettings({ group }) {
               type="button"
               onClick={handleSave}
               disabled={!form.name.trim() || updateGroup.isPending}
-              className="flex-1 px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-hover disabled:opacity-50 transition-colors"
             >
               {updateGroup.isPending ? '저장 중...' : '저장'}
             </button>
@@ -133,18 +133,18 @@ export function GroupSettings({ group }) {
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          className="w-full px-4 py-2.5 text-sm font-medium text-ink-sub bg-warm-bg rounded-full hover:bg-warm-border transition-colors"
         >
           모임 정보 수정
         </button>
       )}
 
-      <div className="pt-4 border-t border-gray-200">
+      <div className="pt-4 border-t border-warm-border">
         <button
           type="button"
           onClick={handleDelete}
           disabled={deleteGroup.isPending}
-          className="w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+          className="w-full px-4 py-2.5 text-sm font-medium text-red-500 bg-red-50 rounded-full hover:bg-red-100 transition-colors"
         >
           {deleteGroup.isPending ? '해산 중...' : '모임 해산'}
         </button>
