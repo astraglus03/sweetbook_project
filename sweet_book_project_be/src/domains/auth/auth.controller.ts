@@ -126,7 +126,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth 콜백' })
   async googleCallback(
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ): Promise<void> {
     await this.handleOAuthCallback(req, res);
   }
@@ -146,7 +146,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Kakao OAuth 콜백' })
   async kakaoCallback(
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ): Promise<void> {
     await this.handleOAuthCallback(req, res);
   }
