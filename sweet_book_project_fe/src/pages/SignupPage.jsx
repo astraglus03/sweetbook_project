@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSignup } from '../features/auth/hooks/useAuth';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const signup = useSignup();
+
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect') || '/groups';
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -15,7 +21,7 @@ export function SignupPage() {
     event.preventDefault();
     try {
       await signup.mutateAsync(form);
-      navigate('/groups', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch {
       // signup.error는 아래에서 표시
     }
@@ -133,14 +139,27 @@ export function SignupPage() {
               />
             </div>
 
-            {signup.isError && (
-              <div
-                role="alert"
-                className="rounded-[10px] bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700"
-              >
-                {signup.error?.response?.data?.error?.message || '회원가입에 실패했습니다'}
-              </div>
-            )}
+            {signup.isError && (() => {
+              const errData = signup.error?.response?.data?.error;
+              const status = signup.error?.response?.status;
+              let message = errData?.message || '회원가입에 실패했습니다';
+              let style = 'bg-red-50 border-red-200 text-red-700';
+
+              if (!signup.error?.response) {
+                message = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+              } else if (status === 409) {
+                message = '이미 가입된 이메일입니다. 로그인해주세요.';
+                style = 'bg-amber-50 border-amber-200 text-amber-800';
+              } else if (status === 400) {
+                message = errData?.message || '입력 정보를 확인해주세요.';
+              }
+
+              return (
+                <div role="alert" className={`rounded-[10px] border px-3.5 py-2.5 text-sm ${style}`}>
+                  {message}
+                </div>
+              );
+            })()}
 
             <button
               type="submit"
@@ -151,10 +170,53 @@ export function SignupPage() {
             </button>
           </form>
 
+          {/* Divider */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-[#E5E0D8]" />
+            <span className="text-xs text-[#9B9B9B]">또는</span>
+            <div className="flex-1 h-px bg-[#E5E0D8]" />
+          </div>
+
+          {/* OAuth buttons */}
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (redirectTo !== '/groups') sessionStorage.setItem('authRedirect', redirectTo);
+                window.location.href = `${API_URL}/auth/oauth/google`;
+              }}
+              className="w-full h-12 bg-white border border-[#E5E0D8] rounded-[10px] text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F5F0] transition flex items-center justify-center gap-2.5"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853" />
+                <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05" />
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335" />
+              </svg>
+              Google로 시작하기
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (redirectTo !== '/groups') sessionStorage.setItem('authRedirect', redirectTo);
+                window.location.href = `${API_URL}/auth/oauth/kakao`;
+              }}
+              className="w-full h-12 bg-[#FEE500] rounded-[10px] text-sm font-medium text-[#3C1E1E] hover:brightness-95 transition flex items-center justify-center gap-2.5"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M9 1.5C4.858 1.5 1.5 4.134 1.5 7.388c0 2.07 1.306 3.888 3.274 4.934l-.834 3.11c-.074.275.234.496.475.34L8.1 13.46c.294.034.595.053.9.053 4.142 0 7.5-2.634 7.5-5.888C16.5 4.134 13.142 1.5 9 1.5z" fill="#3C1E1E" />
+              </svg>
+              카카오로 시작하기
+            </button>
+          </div>
+
           {/* Footer */}
           <p className="mt-7 text-center text-sm text-[#6B6B6B]">
             이미 계정이 있으신가요?{' '}
-            <Link to="/login" className="text-[#D4916E] font-semibold hover:underline">
+            <Link
+              to={redirectTo !== '/groups' ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
+              className="text-[#D4916E] font-semibold hover:underline"
+            >
               로그인
             </Link>
           </p>

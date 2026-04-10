@@ -1,9 +1,129 @@
-import { Controller } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { BooksService } from './books.service';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
+import { CreateBookDto } from './dto/create-book.dto';
+import { AddPagesDto } from './dto/add-pages.dto';
+import { UpdatePageDto } from './dto/update-page.dto';
 
 @ApiTags('books')
+@ApiBearerAuth()
 @Controller('books')
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
+
+  @Get('specs')
+  @ApiOperation({ summary: '포토북 판형 목록 조회 (Sweetbook book-specs 프록시)' })
+  getBookSpecs(@CurrentUser() _user: User) {
+    return this.booksService.getBookSpecs();
+  }
+
+  @Get('specs/:uid/templates')
+  @ApiOperation({ summary: '판형별 템플릿 목록 조회 (Sweetbook templates 프록시)' })
+  getTemplates(
+    @CurrentUser() _user: User,
+    @Param('uid') uid: string,
+  ) {
+    return this.booksService.getTemplates(uid);
+  }
+
+  @Post('groups/:groupId')
+  @ApiOperation({ summary: '그룹 포토북 생성' })
+  createBook(
+    @CurrentUser() user: User,
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Body() dto: CreateBookDto,
+  ) {
+    return this.booksService.createBook(groupId, user.id, dto);
+  }
+
+  @Get('groups/:groupId')
+  @ApiOperation({ summary: '그룹 포토북 목록 조회' })
+  getGroupBooks(
+    @CurrentUser() _user: User,
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ) {
+    return this.booksService.getGroupBooks(groupId);
+  }
+
+  @Get(':bookId')
+  @ApiOperation({ summary: '포토북 상세 조회' })
+  getBook(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getBook(bookId);
+  }
+
+  @Get(':bookId/pages')
+  @ApiOperation({ summary: '포토북 페이지 목록 조회' })
+  getBookPages(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getBookPages(bookId);
+  }
+
+  @Post(':bookId/pages')
+  @ApiOperation({ summary: '포토북 페이지 일괄 추가' })
+  addPages(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Body() dto: AddPagesDto,
+  ) {
+    return this.booksService.addPages(bookId, user.id, dto);
+  }
+
+  @Patch(':bookId/pages/:pageId')
+  @ApiOperation({ summary: '포토북 페이지 수정' })
+  updatePage(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Param('pageId', ParseIntPipe) pageId: number,
+    @Body() dto: UpdatePageDto,
+  ) {
+    return this.booksService.updatePage(bookId, pageId, user.id, dto);
+  }
+
+  @Delete(':bookId/pages/:pageId')
+  @ApiOperation({ summary: '포토북 페이지 삭제' })
+  deletePage(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Param('pageId', ParseIntPipe) pageId: number,
+  ) {
+    return this.booksService.deletePage(bookId, pageId, user.id);
+  }
+
+  @Post(':bookId/finalize')
+  @ApiOperation({ summary: '포토북 최종화 (Sweetbook finalization)' })
+  finalize(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.finalize(bookId, user.id);
+  }
+
+  @Post(':bookId/toggle-share')
+  @ApiOperation({ summary: '포토북 디지털 공유 토글' })
+  toggleShare(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.toggleShare(bookId, user.id);
+  }
 }

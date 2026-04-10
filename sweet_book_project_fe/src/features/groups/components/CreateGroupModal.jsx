@@ -26,9 +26,9 @@ export function CreateGroupModal({ isOpen, onClose }) {
     if (form.uploadDeadline) payload.uploadDeadline = form.uploadDeadline;
 
     createGroup.mutate(payload, {
-      onSuccess: (res) => {
+      onSuccess: (group) => {
         onClose();
-        navigate(`/groups/${res.data.id}`);
+        navigate(`/groups/${group.id}`);
       },
     });
   };

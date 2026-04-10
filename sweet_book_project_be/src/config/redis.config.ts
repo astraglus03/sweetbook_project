@@ -7,7 +7,7 @@ export interface RedisOptions {
 }
 
 export const redisConfig = (configService: ConfigService): RedisOptions => ({
-  host: configService.get<string>('REDIS_HOST', '127.0.0.1'),
-  port: configService.get<number>('REDIS_PORT', 6379),
+  host: configService.getOrThrow<string>('REDIS_HOST'),
+  port: Number(configService.getOrThrow<string>('REDIS_PORT')),
   password: configService.get<string>('REDIS_PASSWORD') || undefined,
 });

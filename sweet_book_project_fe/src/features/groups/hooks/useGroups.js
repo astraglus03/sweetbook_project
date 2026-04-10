@@ -45,7 +45,10 @@ export function useGroupByCode(code) {
 export function useCreateGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => groupsApi.create(payload),
+    mutationFn: async (payload) => {
+      const res = await groupsApi.create(payload);
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GROUPS_LIST_KEY });
     },
@@ -55,8 +58,10 @@ export function useCreateGroup() {
 export function useUpdateGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ groupId, ...payload }) =>
-      groupsApi.update(groupId, payload),
+    mutationFn: async ({ groupId, ...payload }) => {
+      const res = await groupsApi.update(groupId, payload);
+      return res.data;
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: GROUPS_LIST_KEY });
       queryClient.invalidateQueries({
@@ -79,8 +84,10 @@ export function useDeleteGroup() {
 export function useJoinGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ groupId, inviteCode }) =>
-      groupsApi.join(groupId, { inviteCode }),
+    mutationFn: async ({ groupId, inviteCode }) => {
+      const res = await groupsApi.join(groupId, { inviteCode });
+      return res.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GROUPS_LIST_KEY });
     },

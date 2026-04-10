@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   Res,
@@ -25,7 +26,9 @@ import { User } from '../users/entities/user.entity';
 import { OAuthProfileInput } from '../users/users.service';
 import { AuthResult, AuthService } from './auth.service';
 import { AuthUserDto } from './dto/auth-user.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignupDto } from './dto/signup.dto';
 import { TokenService } from './token.service';
 
@@ -111,6 +114,35 @@ export class AuthController {
     return AuthUserDto.from(user);
   }
 
+  // ---- Password Reset ----
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('forgot-password')
+  @ApiOperation({ summary: '비밀번호 재설정 요청 (이메일로 링크 전송)' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ sent: true }> {
+    await this.authService.forgotPassword(dto.email);
+    return { sent: true };
+  }
+
+  @Public()
+  @Get('reset-password/:token')
+  @ApiOperation({ summary: '재설정 토큰 유효성 검증' })
+  async validateResetToken(
+    @Param('token') token: string,
+  ): Promise<{ valid: boolean }> {
+    const valid = await this.authService.validateResetToken(token);
+    return { valid };
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('reset-password')
+  @ApiOperation({ summary: '비밀번호 재설정 (토큰 + 새 비밀번호)' })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ reset: true }> {
+    await this.authService.resetPassword(dto.token, dto.password);
+    return { reset: true };
+  }
+
   // ---- OAuth: Google ----
   @Public()
   @Get('oauth/google')
@@ -157,9 +189,8 @@ export class AuthController {
     res: Response,
   ): Promise<void> {
     const profile = req.user as OAuthProfileInput | undefined;
-    const failureRedirect = this.configService.get<string>(
+    const failureRedirect = this.configService.getOrThrow<string>(
       'OAUTH_FAILURE_REDIRECT',
-      'http://localhost:5173/login?error=oauth_failed',
     );
     if (!profile) {
       res.redirect(failureRedirect);
@@ -168,9 +199,8 @@ export class AuthController {
     try {
       const result = await this.authService.loginWithOAuth(profile);
       this.setAuthCookies(res, result);
-      const successRedirect = this.configService.get<string>(
+      const successRedirect = this.configService.getOrThrow<string>(
         'OAUTH_SUCCESS_REDIRECT',
-        'http://localhost:5173/groups',
       );
       res.redirect(successRedirect);
     } catch {

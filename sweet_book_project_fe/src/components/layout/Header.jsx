@@ -1,8 +1,12 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useMe } from '../../features/auth/hooks/useAuth';
+import { useUnreadCount } from '../../features/notifications/hooks/useNotifications';
 
 export function Header() {
   const { data: user } = useMe();
+  const { data: unreadData } = useUnreadCount();
+  const navigate = useNavigate();
+  const unreadCount = unreadData?.count ?? 0;
 
   return (
     <header className="hidden lg:block h-14 bg-white border-b border-warm-border">
@@ -36,13 +40,26 @@ export function Header() {
 
         {/* Right: Bell + Avatar */}
         <div className="flex items-center gap-3">
-          <button type="button" className="text-ink-sub hover:text-ink transition-colors">
+          <button
+            type="button"
+            onClick={() => navigate('/notifications')}
+            className="relative text-ink-sub hover:text-ink transition-colors"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
-          <div className="w-8 h-8 rounded-full bg-brand overflow-hidden flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="w-8 h-8 rounded-full bg-brand overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-brand/30 transition"
+          >
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
             ) : (
@@ -50,7 +67,7 @@ export function Header() {
                 {user?.name?.[0] ?? '?'}
               </span>
             )}
-          </div>
+          </button>
         </div>
       </div>
     </header>

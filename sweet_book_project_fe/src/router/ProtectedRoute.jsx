@@ -1,11 +1,22 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMe } from '../features/auth/hooks/useAuth';
 import { Header } from '../components/layout/Header';
 import { BottomTab } from '../components/layout/BottomTab';
 
 export function ProtectedRoute() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { data: user, isLoading, isError } = useMe();
+
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem('authRedirect');
+    if (pending) {
+      sessionStorage.removeItem('authRedirect');
+      navigate(pending, { replace: true });
+    }
+  }, [user, navigate]);
 
   if (isLoading) {
     return (

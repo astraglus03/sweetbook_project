@@ -5,6 +5,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './config/typeorm.config';
 import { validateEnv } from './config/env.validation';
 import { RedisModule } from './config/redis.provider';
+import { EmailModule } from './common/email/email.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -30,6 +31,7 @@ import { OpenAiModule } from './external/openai/openai.module';
       useFactory: typeOrmConfig,
     }),
     RedisModule,
+    EmailModule,
     AuthModule,
     UsersModule,
     GroupsModule,

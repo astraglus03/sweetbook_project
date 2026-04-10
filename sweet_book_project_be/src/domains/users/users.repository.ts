@@ -14,6 +14,14 @@ export class UsersRepository {
     return this.repo.findOne({ where: { id } });
   }
 
+  findByIdWithPassword(id: number): Promise<User | null> {
+    return this.repo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
   findByEmail(email: string): Promise<User | null> {
     return this.repo
       .createQueryBuilder('user')

@@ -25,15 +25,13 @@ export class TokenService {
     refreshToken: string;
   }> {
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: this.configService.get<string>(
+      expiresIn: this.configService.getOrThrow<string>(
         'JWT_ACCESS_EXPIRES',
-        '15m',
       ) as `${number}${'s' | 'm' | 'h' | 'd'}`,
     });
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: this.configService.get<string>(
+      expiresIn: this.configService.getOrThrow<string>(
         'JWT_REFRESH_EXPIRES',
-        '7d',
       ) as `${number}${'s' | 'm' | 'h' | 'd'}`,
     });
 
@@ -68,12 +66,12 @@ export class TokenService {
   }
 
   getRefreshTtlSeconds(): number {
-    const raw = this.configService.get<string>('JWT_REFRESH_EXPIRES', '7d');
+    const raw = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES');
     return this.parseDurationToSeconds(raw);
   }
 
   getAccessTtlSeconds(): number {
-    const raw = this.configService.get<string>('JWT_ACCESS_EXPIRES', '15m');
+    const raw = this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES');
     return this.parseDurationToSeconds(raw);
   }
 

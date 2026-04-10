@@ -22,12 +22,9 @@ type DoneCallback = (error: Error | null, user?: OAuthProfileInput) => void;
 export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
   constructor(configService: ConfigService) {
     super({
-      clientID: configService.get<string>('KAKAO_CLIENT_ID', ''),
-      clientSecret: configService.get<string>('KAKAO_CLIENT_SECRET', ''),
-      callbackURL: configService.get<string>(
-        'KAKAO_CALLBACK_URL',
-        'http://localhost:3000/auth/oauth/kakao/callback',
-      ),
+      clientID: configService.getOrThrow<string>('KAKAO_CLIENT_ID'),
+      clientSecret: configService.getOrThrow<string>('KAKAO_CLIENT_SECRET'),
+      callbackURL: configService.getOrThrow<string>('KAKAO_CALLBACK_URL'),
     });
   }
 

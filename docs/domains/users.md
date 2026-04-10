@@ -142,3 +142,35 @@ POST   /users/me/face-anchor/from-photo   기존 photo_face ID로 앵커 설정 
 - 동일 이메일 가입자가 소셜 로그인 시 → 기존 계정에 provider 연동
 - 소셜 로그인 사용자: password NULL 허용
 - 소셜 연동 해제 시 비밀번호 설정 필수 (로그인 수단 0개 방지)
+
+## 비밀번호 재설정 (구현 완료, 2026-04-10)
+
+### 플로우
+```
+1. POST /auth/forgot-password { email }
+   - 사용자 존재 여부 확인 (없어도 동일 응답 → 보안)
+   - passwordHash 없음 (소셜 전용) → 발송 스킵, 서버 로그만
+   - passwordHash 있음 → Redis에 토큰 저장 (30분 TTL) + 이메일 발송
+   - 응답: 항상 { sent: true }
+
+2. GET /auth/reset-password/:token
+   - Redis 토큰 유효성 검증
+   - 응답: { valid: true/false }
+
+3. POST /auth/reset-password { token, password }
+   - Redis에서 userId 조회 → 비밀번호 갱신 → 토큰 삭제
+   - 실패 시 NotFoundException
+```
+
+### 소셜 계정 분기 (로그인 시)
+- 이메일+비밀번호 로그인 시도 → 해당 계정이 소셜 전용 (passwordHash=null)
+- 에러코드: `AUTH_SOCIAL_ONLY`
+- 메시지: "이 계정은 {provider} 소셜 로그인으로 가입되었습니다. {provider}로 로그인해주세요."
+- FE에서 amber 색상 안내로 표시 (에러가 아닌 가이드)
+
+### 이메일 시스템 (Nodemailer)
+- `EmailService` (global module): SMTP 설정 시 실발송, 미설정 시 콘솔 로그
+- HTML 이메일 템플릿 내장 (GroupBook 브랜딩)
+- 환경변수: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- 개발: Gmail SMTP 앱비밀번호 또는 콘솔 로그
+- 프로덕션: SendGrid / AWS SES 전환 가능

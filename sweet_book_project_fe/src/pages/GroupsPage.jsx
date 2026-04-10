@@ -1,12 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMyGroups } from '../features/groups/hooks/useGroups';
 import { GroupCard } from '../features/groups/components/GroupCard';
 import { EmptyGroups } from '../features/groups/components/EmptyGroups';
-import { CreateGroupModal } from '../features/groups/components/CreateGroupModal';
 
 export function GroupsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { data, isLoading, isError, refetch } = useMyGroups({ page, limit: 20 });
 
   const groups = data?.groups ?? [];
@@ -72,7 +72,7 @@ export function GroupsPage() {
         </div>
         <button
           type="button"
-          onClick={() => setIsCreateOpen(true)}
+          onClick={() => navigate('/groups/new')}
           className="inline-flex items-center gap-1.5 h-10 px-5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-full transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ export function GroupsPage() {
       </div>
 
       {groups.length === 0 ? (
-        <EmptyGroups onCreateClick={() => setIsCreateOpen(true)} />
+        <EmptyGroups onCreateClick={() => navigate('/groups/new')} />
       ) : (
         <>
           {/* Mobile: vertical list of horizontal cards */}
@@ -125,10 +125,6 @@ export function GroupsPage() {
         </>
       )}
 
-      <CreateGroupModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-      />
     </div>
   );
 }

@@ -1,6 +1,51 @@
 # Photos 도메인 ERD
 
-## photos 테이블
+## MVP 구현 현황 (2026-04-10)
+
+현재 구현된 Photo 엔티티는 MVP 단순화 버전입니다.
+
+| 계획 컬럼 | MVP 구현 | 비고 |
+|-----------|:--------:|------|
+| id (PK) | O | `number` (auto-increment) |
+| group_id (FK) | O | |
+| uploader_id (FK) | O | |
+| filename | O | `{timestamp}-{random}.webp` |
+| original_filename | O | 원본 파일명 보존 |
+| mimetype | O | |
+| size (bytes) | O | |
+| chapter | O | `string` (chapter_id FK 대신 단순 문자열) |
+| width, height | O | Sharp metadata에서 추출 |
+| original_url / thumbnail_url | O | 동적 생성 (`/uploads/photos/{groupId}/{variant}/{filename}`) |
+| taken_at | - | EXIF 파싱 미구현 |
+| caption | - | |
+| sort_order | - | |
+| is_blurry / phash | - | 블러/중복 감지 미구현 |
+| ai_score / ai_score_detail | - | OpenAI Vision 미연동 |
+| photo_faces 테이블 | - | 얼굴 인식 미구현 |
+| photo_chapters 테이블 | - | 챕터를 단순 문자열로 처리 중 |
+
+### MVP API 엔드포인트 (구현 완료)
+```
+POST   /photos/groups/:groupId          사진 업로드 (다중, multipart)
+GET    /photos/groups/:groupId          사진 목록 (페이지네이션, 챕터/업로더 필터)
+GET    /photos/groups/:groupId/chapters 챕터 목록 (집계)
+GET    /photos/:photoId                 사진 상세
+PATCH  /photos/:photoId                 사진 수정 (챕터 등)
+DELETE /photos/:photoId                 사진 삭제
+```
+
+### 이미지 처리 (Sharp, 동기 처리)
+- 원본 → WebP 변환 (quality 85)
+- original: 1200px (withoutEnlargement)
+- medium: 600px
+- thumbnail: 200x200 (cover crop)
+- EXIF rotation 자동 보정
+
+> Bull Queue 비동기 처리는 향후 전환 예정 (AI 분석, 얼굴 인식 추가 시)
+
+---
+
+## photos 테이블 (전체 계획)
 
 | 컬럼 | 타입 | 제약조건 | 설명 |
 |------|------|----------|------|

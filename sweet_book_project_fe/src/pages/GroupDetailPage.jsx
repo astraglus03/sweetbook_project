@@ -4,6 +4,8 @@ import { useGroupDetail, useLeaveGroup } from '../features/groups/hooks/useGroup
 import { useMe } from '../features/auth/hooks/useAuth';
 import { MemberList } from '../features/groups/components/MemberList';
 import { GroupSettings } from '../features/groups/components/GroupSettings';
+import { PhotoGallery } from '../features/photos/components/PhotoGallery';
+import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal';
 
 const TABS = [
   { key: 'photos', label: '사진' },
@@ -28,6 +30,8 @@ export function GroupDetailPage() {
   const leaveGroup = useLeaveGroup();
   const [activeTab, setActiveTab] = useState('photos');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const isOwner = me && group && me.id === group.ownerId;
 
@@ -153,20 +157,47 @@ export function GroupDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Share */}
+            {/* Share — copy invite link */}
             <button
               type="button"
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
-              title="공유"
+              onClick={async () => {
+                const link = `${window.location.origin}/join/${group.inviteCode}`;
+                try {
+                  await navigator.clipboard.writeText(link);
+                } catch {
+                  const ta = document.createElement('textarea');
+                  ta.value = link;
+                  document.body.appendChild(ta);
+                  ta.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(ta);
+                }
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+              }}
+              className={`h-9 flex items-center justify-center rounded-full transition-colors text-white ${
+                shareCopied ? 'bg-green-500/30 px-3 gap-1.5' : 'w-9 bg-white/10 hover:bg-white/20'
+              }`}
+              title="초대 링크 복사"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
+              {shareCopied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-xs font-medium">복사됨</span>
+                </>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              )}
             </button>
 
             {/* Upload */}
             <button
               type="button"
+              onClick={() => setIsUploadOpen(true)}
               className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
               title="사진 업로드"
             >
@@ -235,9 +266,10 @@ export function GroupDetailPage() {
       {/* Tab content */}
       <div className="px-4 lg:px-10 py-5">
         {activeTab === 'photos' && (
-          <div className="text-center py-16 text-sm text-ink-muted">
-            사진 갤러리는 다음 단계에서 구현됩니다
-          </div>
+          <PhotoGallery
+            groupId={Number(groupId)}
+            onUploadClick={() => setIsUploadOpen(true)}
+          />
         )}
         {activeTab === 'members' && (
           <MemberList
@@ -245,11 +277,25 @@ export function GroupDetailPage() {
             members={group.members ?? []}
             currentUserId={me?.id}
             ownerId={group.ownerId}
+            inviteCode={group.inviteCode}
           />
         )}
         {activeTab === 'books' && (
-          <div className="text-center py-16 text-sm text-ink-muted">
-            포토북 기능은 다음 단계에서 구현됩니다
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-light flex items-center justify-center">
+              <svg className="w-8 h-8 text-brand/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <p className="text-sm text-ink mb-1">포토북을 만들어보세요</p>
+            <p className="text-xs text-ink-muted mb-4">사진을 모아 멋진 포토북을 제작할 수 있습니다</p>
+            <button
+              type="button"
+              onClick={() => navigate(`/groups/${groupId}/books/templates`)}
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-brand rounded-full hover:bg-brand-hover transition-colors"
+            >
+              포토북 만들기
+            </button>
           </div>
         )}
         {activeTab === 'orders' && (
@@ -258,6 +304,13 @@ export function GroupDetailPage() {
           </div>
         )}
       </div>
+
+      <PhotoUploadModal
+        groupId={Number(groupId)}
+        groupName={group.name}
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+      />
     </div>
   );
 }

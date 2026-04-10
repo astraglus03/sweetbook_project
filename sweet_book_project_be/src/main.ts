@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,7 +16,7 @@ async function bootstrap(): Promise<void> {
 
   app.use(cookieParser());
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN', 'http://localhost:5173'),
+    origin: configService.getOrThrow<string>('CORS_ORIGIN'),
     credentials: true,
   });
 
@@ -36,6 +37,10 @@ async function bootstrap(): Promise<void> {
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
+
+  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);

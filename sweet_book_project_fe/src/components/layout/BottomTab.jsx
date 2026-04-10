@@ -40,9 +40,9 @@ function UserIcon() {
 
 const tabs = [
   { label: '내 모임', icon: LayoutGridIcon, to: '/groups' },
-  { label: '둘러보기', icon: CompassIcon, to: '#' },
-  { label: '알림', icon: BellIcon, to: '#' },
-  { label: '프로필', icon: UserIcon, to: '#' },
+  { label: '둘러보기', icon: CompassIcon, to: '/groups' },
+  { label: '알림', icon: BellIcon, to: '/notifications' },
+  { label: '프로필', icon: UserIcon, to: '/profile' },
 ];
 
 export function BottomTab() {

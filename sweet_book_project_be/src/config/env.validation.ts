@@ -10,9 +10,9 @@ class EnvVariables {
   @IsString()
   PORT?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  CORS_ORIGIN?: string;
+  CORS_ORIGIN: string;
 
   // PostgreSQL
   @IsNotEmpty()
@@ -53,47 +53,47 @@ class EnvVariables {
   @IsString()
   JWT_SECRET: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  JWT_ACCESS_EXPIRES?: string;
+  JWT_ACCESS_EXPIRES: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  JWT_REFRESH_EXPIRES?: string;
+  JWT_REFRESH_EXPIRES: string;
 
   // OAuth - Google
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_ID: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_CLIENT_SECRET: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  GOOGLE_CALLBACK_URL?: string;
+  GOOGLE_CALLBACK_URL: string;
 
   // OAuth - Kakao
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  KAKAO_CLIENT_ID?: string;
+  KAKAO_CLIENT_ID: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  KAKAO_CLIENT_SECRET?: string;
+  KAKAO_CLIENT_SECRET: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  KAKAO_CALLBACK_URL?: string;
+  KAKAO_CALLBACK_URL: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  OAUTH_SUCCESS_REDIRECT?: string;
+  OAUTH_SUCCESS_REDIRECT: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  OAUTH_FAILURE_REDIRECT?: string;
+  OAUTH_FAILURE_REDIRECT: string;
 
   // Sweetbook
   @IsOptional()

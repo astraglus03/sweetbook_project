@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLogin } from '../features/auth/hooks/useAuth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -11,8 +11,9 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const login = useLogin();
 
-  const redirectTo = location.state?.from?.pathname || '/groups';
-  const oauthError = new URLSearchParams(location.search).get('error');
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect') || location.state?.from?.pathname || '/groups';
+  const oauthError = searchParams.get('error');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -25,6 +26,9 @@ export function LoginPage() {
   };
 
   const handleOAuth = (provider) => {
+    if (redirectTo !== '/groups') {
+      sessionStorage.setItem('authRedirect', redirectTo);
+    }
     window.location.href = `${API_URL}/auth/oauth/${provider}`;
   };
 
@@ -133,14 +137,30 @@ export function LoginPage() {
               />
             </div>
 
-            {login.isError && (
-              <div
-                role="alert"
-                className="rounded-[10px] bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700"
-              >
-                {login.error?.response?.data?.error?.message || '로그인에 실패했습니다'}
-              </div>
-            )}
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-xs text-brand hover:underline">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </div>
+
+            {login.isError && (() => {
+              const errData = login.error?.response?.data?.error;
+              const code = errData?.code;
+              let message = errData?.message || '로그인에 실패했습니다';
+              let style = 'bg-red-50 border-red-200 text-red-700';
+
+              if (!login.error?.response) {
+                message = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+              } else if (code === 'AUTH_SOCIAL_ONLY') {
+                style = 'bg-amber-50 border-amber-200 text-amber-800';
+              }
+
+              return (
+                <div role="alert" className={`rounded-[10px] border px-3.5 py-2.5 text-sm ${style}`}>
+                  {message}
+                </div>
+              );
+            })()}
 
             <button
               type="submit"
@@ -188,7 +208,10 @@ export function LoginPage() {
           {/* Footer */}
           <p className="mt-7 text-center text-sm text-[#6B6B6B]">
             계정이 없으신가요?{' '}
-            <Link to="/signup" className="text-[#D4916E] font-semibold hover:underline">
+            <Link
+              to={redirectTo !== '/groups' ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup'}
+              className="text-[#D4916E] font-semibold hover:underline"
+            >
               회원가입
             </Link>
           </p>
