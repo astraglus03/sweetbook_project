@@ -12,6 +12,18 @@ export function useBookSpecs() {
   });
 }
 
+export function useThemes(bookSpecUid) {
+  return useQuery({
+    queryKey: ['books', 'themes', bookSpecUid],
+    queryFn: async () => {
+      const res = await booksApi.getThemes(bookSpecUid);
+      return res.data;
+    },
+    enabled: !!bookSpecUid,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
 export function useTemplates(bookSpecUid) {
   return useQuery({
     queryKey: ['books', 'templates', bookSpecUid],
@@ -109,6 +121,53 @@ export function useFinalizeBook(bookId) {
     mutationFn: () => booksApi.finalize(bookId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['books', bookId] });
+    },
+  });
+}
+
+export function useAvailableTemplates(bookId) {
+  return useQuery({
+    queryKey: ['books', bookId, 'availableTemplates'],
+    queryFn: async () => {
+      const res = await booksApi.getAvailableTemplates(bookId);
+      return res.data;
+    },
+    enabled: !!bookId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useTemplateLayout(bookId) {
+  return useQuery({
+    queryKey: ['books', bookId, 'templateLayout'],
+    queryFn: async () => {
+      const res = await booksApi.getTemplateLayout(bookId);
+      return res.data;
+    },
+    enabled: !!bookId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useBookSpecInfo(bookId) {
+  return useQuery({
+    queryKey: ['books', bookId, 'specInfo'],
+    queryFn: async () => {
+      const res = await booksApi.getSpecInfo(bookId);
+      return res.data;
+    },
+    enabled: !!bookId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRetryBook(bookId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => booksApi.retry(bookId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['books', bookId, 'specInfo'] });
     },
   });
 }

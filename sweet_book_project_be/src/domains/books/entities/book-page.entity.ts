@@ -31,6 +31,12 @@ export class BookPage {
   @Column({ type: 'varchar', length: 500, nullable: true })
   caption: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  contentTemplateUid: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  templateParams: Record<string, string> | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

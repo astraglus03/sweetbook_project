@@ -56,6 +56,9 @@ export class Book {
   @Column({ type: 'varchar' })
   bookSpecUid: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  theme: string | null;
+
   @Column({
     type: 'enum',
     enum: ['DRAFT', 'UPLOADING', 'PROCESSING', 'READY', 'ORDERED', 'FAILED'],

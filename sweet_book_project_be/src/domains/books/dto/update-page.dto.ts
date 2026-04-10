@@ -16,4 +16,13 @@ export class UpdatePageDto {
   @IsOptional()
   @IsString()
   caption?: string;
+
+  @ApiPropertyOptional({ description: '내지 템플릿 UID' })
+  @IsOptional()
+  @IsString()
+  contentTemplateUid?: string;
+
+  @ApiPropertyOptional({ description: '템플릿 파라미터 (key-value)' })
+  @IsOptional()
+  templateParams?: Record<string, string>;
 }

@@ -6,6 +6,7 @@ import { MemberList } from '../features/groups/components/MemberList';
 import { GroupSettings } from '../features/groups/components/GroupSettings';
 import { PhotoGallery } from '../features/photos/components/PhotoGallery';
 import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal';
+import { GroupOrdersTab } from '../features/orders/components/GroupOrdersTab';
 
 const TABS = [
   { key: 'photos', label: '사진' },
@@ -299,9 +300,7 @@ export function GroupDetailPage() {
           </div>
         )}
         {activeTab === 'orders' && (
-          <div className="text-center py-16 text-sm text-ink-muted">
-            주문 기능은 다음 단계에서 구현됩니다
-          </div>
+          <GroupOrdersTab groupId={Number(groupId)} navigate={navigate} />
         )}
       </div>
 

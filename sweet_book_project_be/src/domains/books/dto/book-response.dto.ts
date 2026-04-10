@@ -27,6 +27,9 @@ export class BookResponseDto {
   @ApiProperty()
   bookSpecUid: string;
 
+  @ApiPropertyOptional()
+  theme: string | null;
+
   @ApiProperty({ enum: ['DRAFT', 'UPLOADING', 'PROCESSING', 'READY', 'ORDERED', 'FAILED'] })
   status: BookStatus;
 
@@ -67,6 +70,7 @@ export class BookResponseDto {
     dto.ownerUserId = book.ownerUserId;
     dto.templateUid = book.templateUid;
     dto.bookSpecUid = book.bookSpecUid;
+    dto.theme = book.theme;
     dto.status = book.status;
     dto.sweetbookBookUid = book.sweetbookBookUid;
     dto.externalRef = book.externalRef;

@@ -86,7 +86,7 @@ export function BookPreviewPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/groups/${book.groupId}`)}
+            onClick={() => navigate(`/books/${bookId}/order`)}
             className="h-8 px-4 text-xs font-semibold text-white bg-brand rounded-full hover:bg-brand-hover transition-colors"
           >
             주문하기

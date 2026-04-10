@@ -15,4 +15,8 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   templateUid?: string;
+
+  @ApiProperty({ description: '포토북 테마 (구글포토북C, 일기장B 등)' })
+  @IsString()
+  theme: string;
 }

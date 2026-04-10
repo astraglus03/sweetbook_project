@@ -41,6 +41,15 @@ export class BooksController {
     return this.booksService.getTemplates(uid);
   }
 
+  @Get('specs/:uid/themes')
+  @ApiOperation({ summary: '판형별 사용 가능한 테마 목록 조회' })
+  getThemes(
+    @CurrentUser() _user: User,
+    @Param('uid') uid: string,
+  ) {
+    return this.booksService.getThemes(uid);
+  }
+
   @Post('groups/:groupId')
   @ApiOperation({ summary: '그룹 포토북 생성' })
   createBook(
@@ -109,6 +118,33 @@ export class BooksController {
     return this.booksService.deletePage(bookId, pageId, user.id);
   }
 
+  @Get(':bookId/available-templates')
+  @ApiOperation({ summary: '포토북 테마의 사용 가능한 내지 템플릿 목록 (레이아웃 포함)' })
+  getAvailableTemplates(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getAvailableTemplates(bookId);
+  }
+
+  @Get(':bookId/template-layout')
+  @ApiOperation({ summary: '포토북 테마의 content/cover 템플릿 레이아웃 조회' })
+  getTemplateLayout(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getTemplateLayout(bookId);
+  }
+
+  @Get(':bookId/spec-info')
+  @ApiOperation({ summary: '포토북 판형 스펙 + 현재 페이지 수 조회' })
+  getBookSpecInfo(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getBookSpecInfo(bookId);
+  }
+
   @Post(':bookId/finalize')
   @ApiOperation({ summary: '포토북 최종화 (Sweetbook finalization)' })
   finalize(
@@ -116,6 +152,15 @@ export class BooksController {
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
     return this.booksService.finalize(bookId, user.id);
+  }
+
+  @Post(':bookId/retry')
+  @ApiOperation({ summary: 'FAILED 포토북 재시도 (DRAFT로 초기화)' })
+  retryFinalize(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.retryFinalize(bookId, user.id);
   }
 
   @Post(':bookId/toggle-share')

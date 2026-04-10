@@ -9,9 +9,15 @@ import {
 } from 'class-validator';
 
 export class PageItemDto {
-  @ApiProperty({ description: '사진 ID' })
+  @ApiPropertyOptional({ description: '사진 ID' })
+  @IsOptional()
   @IsInt()
-  photoId: number;
+  photoId?: number;
+
+  @ApiPropertyOptional({ description: '사용할 내지 템플릿 UID' })
+  @IsOptional()
+  @IsString()
+  contentTemplateUid?: string;
 
   @ApiPropertyOptional({ description: '챕터 제목' })
   @IsOptional()
@@ -22,6 +28,10 @@ export class PageItemDto {
   @IsOptional()
   @IsString()
   caption?: string;
+
+  @ApiPropertyOptional({ description: '템플릿 파라미터 (key-value)' })
+  @IsOptional()
+  templateParams?: Record<string, string>;
 }
 
 export class AddPagesDto {

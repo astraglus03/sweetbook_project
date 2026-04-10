@@ -14,6 +14,7 @@ import { BookCreatePage } from '../pages/BookCreatePage';
 import { BookEditorPage } from '../pages/BookEditorPage';
 import { BookPreviewPage } from '../pages/BookPreviewPage';
 import { OrdersPage } from '../pages/OrdersPage';
+import OrderPage from '../pages/OrderPage';
 import { JoinPage } from '../pages/JoinPage';
 import { SharedViewerPage } from '../pages/SharedViewerPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: '/groups/:groupId/books/new', element: <BookCreatePage /> },
       { path: '/books/:bookId/editor', element: <BookEditorPage /> },
       { path: '/books/:bookId/preview', element: <BookPreviewPage /> },
+      { path: '/books/:bookId/order', element: <OrderPage /> },
       { path: '/orders', element: <OrdersPage /> },
     ],
   },
