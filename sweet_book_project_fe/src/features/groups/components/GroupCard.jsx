@@ -1,19 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 
 const STATUS_LABELS = {
-  COLLECTING: '사진 수집중',
-  EDITING: '편집중',
-  VOTING: '투표중',
+  COLLECTING: '수집 중',
+  EDITING: '편집 중',
+  VOTING: '투표 중',
   ORDERED: '주문 완료',
-  COMPLETED: '배송 완료',
+  COMPLETED: '완료',
 };
 
 const STATUS_COLORS = {
-  COLLECTING: 'bg-brand-light text-brand',
-  EDITING: 'bg-yellow-100 text-yellow-700',
-  VOTING: 'bg-purple-100 text-purple-700',
-  ORDERED: 'bg-green-100 text-green-700',
-  COMPLETED: 'bg-warm-bg text-ink-muted',
+  COLLECTING: { bg: '#D4916E22', text: '#D4916E' },
+  EDITING: { bg: '#4A90D922', text: '#4A90D9' },
+  VOTING: { bg: '#9B59B622', text: '#9B59B6' },
+  ORDERED: { bg: '#4CAF5022', text: '#4CAF50' },
+  COMPLETED: { bg: '#4CAF5022', text: '#4CAF50' },
 };
 
 export function GroupCard({ group }) {
@@ -27,7 +27,7 @@ export function GroupCard({ group }) {
         flex flex-row sm:flex-col"
     >
       {/* Cover image */}
-      <div className="w-[100px] h-[100px] flex-shrink-0 sm:w-full sm:h-36 relative">
+      <div className="w-[100px] h-[100px] flex-shrink-0 sm:w-full sm:h-[140px] relative overflow-hidden">
         {group.coverImage ? (
           <img
             src={group.coverImage}
@@ -52,39 +52,29 @@ export function GroupCard({ group }) {
             </svg>
           </div>
         )}
-        {/* Status badge — desktop only (absolute) */}
-        <span
-          className={`hidden sm:inline-flex absolute top-2 right-2 px-2.5 py-0.5 text-[11px] font-medium rounded-full ${STATUS_COLORS[group.status] ?? 'bg-warm-bg text-ink-muted'}`}
-        >
-          {STATUS_LABELS[group.status] ?? group.status}
-        </span>
       </div>
 
       {/* Info */}
-      <div className="p-3 sm:p-4 flex flex-col justify-center gap-1.5 sm:gap-0 flex-1 min-w-0">
-        {/* Status badge — mobile only (inline) */}
+      <div className="p-3 sm:p-4 flex flex-col justify-center gap-1.5 flex-1 min-w-0">
+        {/* Status badge */}
         <span
-          className={`inline-flex sm:hidden self-start px-1.5 py-0.5 text-[10px] font-medium rounded-full ${STATUS_COLORS[group.status] ?? 'bg-warm-bg text-ink-muted'}`}
+          className="inline-flex self-start px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full"
+          style={{
+            background: (STATUS_COLORS[group.status] ?? STATUS_COLORS.COLLECTING).bg,
+            color: (STATUS_COLORS[group.status] ?? STATUS_COLORS.COLLECTING).text,
+          }}
         >
           {STATUS_LABELS[group.status] ?? group.status}
         </span>
 
-        <h3 className="text-sm sm:text-base font-semibold text-ink truncate">
+        <h3 className="text-[15px] sm:text-[16px] font-semibold text-ink truncate">
           {group.name}
         </h3>
 
-        {group.description && (
-          <p className="text-xs sm:text-[13px] text-ink-sub line-clamp-1 sm:line-clamp-2 sm:mt-1">
-            {group.description}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 text-[11px] sm:text-xs text-ink-muted sm:mt-2">
-          <span>{group.memberCount ?? 0}명</span>
-          {group.eventDate && (
-            <span>{new Date(group.eventDate).toLocaleDateString('ko-KR')}</span>
-          )}
-        </div>
+        <p className="text-[12px] text-ink-muted truncate">
+          멤버 {group.memberCount ?? 0} | 사진 {group.photoCount ?? 0}
+          {group.uploadDeadline && ` | D-${Math.max(0, Math.ceil((new Date(group.uploadDeadline) - new Date()) / 86400000))}`}
+        </p>
       </div>
     </button>
   );

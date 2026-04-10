@@ -63,14 +63,12 @@ export function GroupsPage() {
       {/* Header row */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-xl lg:text-2xl font-bold text-ink">
+          <h1 className="text-[20px] lg:text-[24px] font-bold text-ink">
             내 모임
           </h1>
-          {groups.length > 0 && (
-            <p className="text-sm text-ink-muted mt-0.5">
-              총 {meta?.total ?? groups.length}개
-            </p>
-          )}
+          <p className="text-[14px] text-ink-sub mt-1">
+            모임과 포토북 프로젝트를 관리하세요
+          </p>
         </div>
         <button
           type="button"
