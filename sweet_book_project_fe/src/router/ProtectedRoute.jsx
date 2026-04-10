@@ -22,7 +22,7 @@ export function ProtectedRoute() {
   return (
     <div className="min-h-screen bg-warm-bg font-sans">
       <Header />
-      <main className="pb-16 lg:pb-0">
+      <main className="pb-16 lg:pb-0 page-enter">
         <Outlet />
       </main>
       <BottomTab />

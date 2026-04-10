@@ -2,198 +2,245 @@ import { Link } from 'react-router-dom';
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-warm-bg font-sans">
-      {/* Desktop Navbar */}
-      <nav className="hidden lg:flex items-center justify-between h-[72px] px-20 bg-warm-bg">
+    <div className="min-h-screen font-sans overflow-x-hidden" style={{ background: '#F3EBE2' }}>
+      {/* ── Navbar (Desktop) ── */}
+      <nav className="hidden lg:flex items-center justify-between h-[72px] px-20 sticky top-0 z-50 backdrop-blur-md" style={{ background: 'rgba(243,235,226,0.85)' }}>
         <div className="flex items-center gap-2">
-          <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-7 h-7 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <span className="font-display font-bold text-ink text-lg">GroupBook</span>
+          <span className="font-display font-bold text-[22px]" style={{ color: '#1A1A1A' }}>GroupBook</span>
         </div>
         <div className="flex items-center gap-8">
-          <a href="#features" className="text-ink-sub text-sm font-medium hover:text-ink transition-colors">서비스 소개</a>
-          <a href="#features" className="text-ink-sub text-sm font-medium hover:text-ink transition-colors">주요 기능</a>
-          <a href="#how-it-works" className="text-ink-sub text-sm font-medium hover:text-ink transition-colors">이용 방법</a>
-          <a href="#pricing" className="text-ink-sub text-sm font-medium hover:text-ink transition-colors">요금 안내</a>
+          {['서비스 소개', '주요 기능', '이용 방법', '요금 안내'].map((label) => (
+            <a key={label} href={`#${label}`} className="text-[14px] font-medium transition-colors hover:text-ink" style={{ color: '#3D3D3D' }}>{label}</a>
+          ))}
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/login" className="text-ink text-sm font-medium px-4 h-10 flex items-center hover:text-ink-sub transition-colors">
+          <Link to="/login" className="text-[14px] font-medium px-4 h-10 flex items-center rounded-full transition-colors hover:bg-black/5" style={{ color: '#3D3D3D' }}>
             로그인
           </Link>
-          <Link to="/signup" className="bg-ink text-white text-sm font-medium rounded-full px-5 h-10 flex items-center hover:bg-ink/80 transition-colors">
+          <Link to="/signup" className="text-[14px] font-semibold text-white rounded-full px-5 h-10 flex items-center transition-all hover:opacity-90" style={{ background: '#1A1A1A' }}>
             시작하기
           </Link>
         </div>
       </nav>
 
-      {/* Mobile Navbar */}
-      <nav className="flex lg:hidden items-center justify-between h-14 px-4 bg-warm-bg">
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* ── Navbar (Mobile) ── */}
+      <nav className="flex lg:hidden items-center justify-between h-14 px-4 sticky top-0 z-50 backdrop-blur-md" style={{ background: 'rgba(243,235,226,0.85)' }}>
+        <div className="flex items-center gap-1.5">
+          <svg className="w-[22px] h-[22px] text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <span className="font-display font-bold text-ink text-base">GroupBook</span>
+          <span className="font-display font-bold text-[18px]" style={{ color: '#1A1A1A' }}>GroupBook</span>
         </div>
-        <Link to="/signup" className="bg-ink text-white rounded-full text-[13px] font-medium px-4 py-2 hover:bg-ink/80 transition-colors">
+        <Link to="/signup" className="text-[13px] font-semibold text-white rounded-full px-4 py-2 transition-colors hover:opacity-90" style={{ background: '#1A1A1A' }}>
           시작하기
         </Link>
       </nav>
 
-      {/* Hero Section */}
-      <section className="bg-warm-bg px-6 py-12 lg:py-20 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 bg-warm-tag/30 rounded-full px-5 py-2 mb-8">
-          <svg className="w-4 h-4 text-ink-sub" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* ── Hero Section ── */}
+      <section className="flex flex-col items-center px-6 lg:px-20 pt-12 lg:pt-20 pb-10 lg:pb-[60px]" style={{ background: '#F3EBE2' }}>
+        {/* Tag */}
+        <div className="animate-fade-up flex items-center gap-2 rounded-full px-5 py-2 mb-10" style={{ background: '#C5BEB6' }}>
+          <svg className="w-4 h-4" style={{ color: '#1A1A1A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
           </svg>
-          <span className="text-ink text-[13px] font-medium">모임의 순간을 영원히 간직하세요</span>
+          <span className="text-[13px] font-medium" style={{ color: '#1A1A1A' }}>모임의 순간을 영원히 간직하세요</span>
         </div>
-        <h1 className="font-display font-bold text-ink text-4xl lg:text-[56px] leading-tight mb-6 whitespace-pre-line">
-          {'함께한 순간,\n한 권의 포토북으로'}
-        </h1>
-        <p className="text-ink-sub text-base lg:text-lg max-w-[800px] mb-10 leading-relaxed">
-          동창회, 동호회, 가족 모임의 사진을 한곳에 모아 클릭 몇 번으로 단체 포토북을 공동 제작하세요. 각자가 주인공인 나만의 포토북을 받아보세요.
-        </p>
-        <div className="flex flex-col lg:flex-row items-center gap-4 w-full lg:w-auto">
+
+        {/* Hero Text */}
+        <div className="animate-fade-up animate-fade-up-delay-1 flex flex-col items-center gap-5 max-w-[800px] mb-10">
+          <h1 className="font-display font-bold text-center leading-[1.15] text-[36px] lg:text-[56px]" style={{ color: '#1A1A1A' }}>
+            함께한 순간,{'\n'}한 권의 포토북으로
+          </h1>
+          <p className="text-center text-[14px] lg:text-[18px] leading-[1.6]" style={{ color: '#6B6B6B' }}>
+            동창회, 동호회, 가족모임 — 각자 찍은 사진을 한 곳에 모아{'\n'}
+            클릭 몇 번으로 단체 포토북을 만들고 주문하세요.
+          </p>
+        </div>
+
+        {/* Hero Buttons */}
+        <div className="animate-fade-up animate-fade-up-delay-2 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-12 lg:mb-10">
           <Link
             to="/signup"
-            className="w-full lg:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-full h-[52px] px-8 transition-colors"
+            className="group w-full sm:w-auto flex items-center justify-center gap-2 rounded-full h-[52px] px-8 text-[16px] font-semibold text-white transition-all hover:shadow-lg hover:shadow-brand/25 active:scale-[0.98]"
+            style={{ background: '#D4916E' }}
           >
             무료로 시작하기
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
           </Link>
           <a
             href="#features"
-            className="w-full lg:w-auto flex items-center justify-center border border-warm-tag text-ink font-medium rounded-full h-[52px] px-7 hover:bg-warm-border/30 transition-colors"
+            className="w-full sm:w-auto flex items-center justify-center rounded-full h-[52px] px-7 text-[16px] font-medium transition-all hover:bg-black/5 active:scale-[0.98]"
+            style={{ color: '#3D3D3D', border: '1.5px solid #C5BEB6' }}
           >
-            둘러보기
+            서비스 소개 보기
           </a>
         </div>
+
+        {/* Hero Preview — 3-column photo grid */}
+        <div className="animate-fade-up animate-fade-up-delay-3 w-full max-w-[1100px] grid grid-cols-2 lg:grid-cols-3 gap-4 h-auto lg:h-[480px]">
+          {/* Col 1 */}
+          <div className="flex flex-col gap-4 h-[320px] lg:h-full">
+            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-rose-200 to-orange-100 hover-lift">
+              <img src="https://images.unsplash.com/photo-1759567153576-abdd893a9065?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+            <div className="h-[160px] rounded-2xl flex flex-col justify-end p-6 hover-lift" style={{ background: '#D4916E' }}>
+              <span className="text-white text-[36px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>1,200+</span>
+              <span className="text-white/80 text-[14px] font-medium">포토북 제작 완료</span>
+            </div>
+          </div>
+          {/* Col 2 */}
+          <div className="flex flex-col gap-4 h-[320px] lg:h-full">
+            <div className="h-[200px] rounded-2xl flex flex-col justify-end p-6 hover-lift" style={{ background: '#1A1A1A' }}>
+              <span className="text-white text-[36px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>98%</span>
+              <span className="text-white/80 text-[14px] font-medium">만족도</span>
+            </div>
+            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-200 to-indigo-100 hover-lift">
+              <img src="https://images.unsplash.com/photo-1559136646-8d0d1f46a146?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+          </div>
+          {/* Col 3 (desktop only) */}
+          <div className="hidden lg:flex flex-col gap-4 h-full">
+            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-200 to-teal-100 hover-lift">
+              <img src="https://images.unsplash.com/photo-1699519323453-fec3a921407d?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
+            </div>
+            <div className="h-[180px] rounded-2xl flex flex-col items-center justify-center gap-2 hover-lift" style={{ background: '#3D3D3D' }}>
+              <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="text-white/80 text-[14px] font-medium text-center">500+ 모임 활동 중</span>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="bg-white px-5 py-10 lg:px-20 lg:py-20">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-brand text-[13px] font-semibold mb-3">주요 기능</p>
-            <h2 className="font-display font-bold text-ink text-[26px] lg:text-4xl mb-4">
-              포토북 제작의 모든 것
+      {/* ── Features Section ── */}
+      <section id="features" className="px-6 lg:px-20 py-16 lg:py-20">
+        <div className="max-w-[1280px] mx-auto">
+          {/* Header */}
+          <div className="animate-fade-up flex flex-col items-center gap-4 mb-12 max-w-[600px] mx-auto text-center">
+            <span className="text-[13px] font-semibold" style={{ color: '#D4916E' }}>주요 기능</span>
+            <h2 className="font-display font-bold text-[26px] lg:text-[36px]" style={{ color: '#1A1A1A' }}>
+              포토북 제작, 이렇게 쉬울 수 있어요
             </h2>
-            <p className="text-ink-sub text-sm lg:text-base max-w-xl mx-auto">
-              번거로운 과정 없이 간편하게 단체 포토북을 만들어보세요
+            <p className="text-[14px] lg:text-[16px]" style={{ color: '#6B6B6B' }}>
+              복잡한 편집 없이, 사진만 모으면 자동으로 완성됩니다
             </p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl shadow-sm p-8">
-              <div className="w-11 h-11 bg-brand-light rounded-xl flex items-center justify-center mb-5">
-                <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {[
+              {
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />,
+                title: '사진 공동 업로드',
+                desc: '초대 링크 하나로 멤버들이 각자 사진을 올리면, 한 앨범에 자동 모입니다.',
+              },
+              {
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />,
+                title: '원클릭 포토북 제작',
+                desc: 'AI가 사진을 분석하고 최적의 레이아웃으로 자동 배치. 편집 고민 없이 완성됩니다.',
+              },
+              {
+                icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />,
+                title: '간편 주문 & 배송',
+                desc: '수량 선택 후 결제하면 고품질 인쇄본이 집 앞까지. 단체 주문도 한 번에 처리됩니다.',
+              },
+            ].map((f, i) => (
+              <div
+                key={i}
+                className={`animate-fade-up animate-fade-up-delay-${i + 1} hover-lift bg-white rounded-2xl p-8 gap-5 flex flex-col`}
+                style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+              >
+                <div className="w-14 h-14 rounded-[14px] flex items-center justify-center" style={{ background: '#D4916E22' }}>
+                  <svg className="w-7 h-7 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">{f.icon}</svg>
+                </div>
+                <h3 className="text-[18px] font-semibold" style={{ color: '#1A1A1A' }}>{f.title}</h3>
+                <p className="text-[14px] leading-[1.6]" style={{ color: '#6B6B6B' }}>{f.desc}</p>
               </div>
-              <h3 className="text-ink font-semibold text-base mb-2">사진 모으기</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                모임 멤버가 각자 찍은 사진을 한 곳에 모아보세요. 카카오톡 대화방 사진도 한 번에 가져올 수 있어요.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl shadow-sm p-8">
-              <div className="w-11 h-11 bg-brand-light rounded-xl flex items-center justify-center mb-5">
-                <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <h3 className="text-ink font-semibold text-base mb-2">AI 자동 편집</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                AI가 얼굴 인식으로 각 멤버가 주인공인 맞춤 포토북을 자동으로 구성해드려요. 1모임, N권의 특별한 포토북.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl shadow-sm p-8">
-              <div className="w-11 h-11 bg-brand-light rounded-xl flex items-center justify-center mb-5">
-                <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <h3 className="text-ink font-semibold text-base mb-2">각자 주문 배송</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                완성된 포토북을 각자의 주소로 따로 주문하고 받아볼 수 있어요. 복잡한 공동구매 없이 간편하게.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="bg-white px-5 py-10 lg:px-20 lg:py-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-brand text-[13px] font-semibold mb-3">이용 방법</p>
-            <h2 className="font-display font-bold text-ink text-[26px] lg:text-4xl mb-4">
-              3단계로 완성하는 포토북
+      {/* ── How It Works ── */}
+      <section id="how-it-works" className="bg-white px-6 lg:px-20 py-16 lg:py-20">
+        <div className="max-w-[1080px] mx-auto">
+          {/* Header */}
+          <div className="animate-fade-up flex flex-col items-center gap-4 mb-12 max-w-[600px] mx-auto text-center">
+            <span className="text-[13px] font-semibold" style={{ color: '#D4916E' }}>이용 방법</span>
+            <h2 className="font-display font-bold text-[26px] lg:text-[36px]" style={{ color: '#1A1A1A' }}>
+              3단계로 완성하는 우리 모임 포토북
             </h2>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-9 h-9 bg-brand rounded-full flex items-center justify-center text-white font-semibold text-sm mb-5">
-                1
-              </div>
-              <h3 className="text-ink font-semibold text-base mb-2">모임 만들고 초대하기</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                모임을 만들고 링크나 QR코드로 멤버를 초대하세요. 가입 없이도 참여할 수 있어요.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-9 h-9 bg-brand rounded-full flex items-center justify-center text-white font-semibold text-sm mb-5">
-                2
-              </div>
-              <h3 className="text-ink font-semibold text-base mb-2">각자 사진 올리기</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                각 멤버가 자신이 찍은 사진을 업로드하면 한 곳에 자동으로 모여요.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-9 h-9 bg-brand rounded-full flex items-center justify-center text-white font-semibold text-sm mb-5">
-                3
-              </div>
-              <h3 className="text-ink font-semibold text-base mb-2">포토북 주문하기</h3>
-              <p className="text-ink-sub text-[13px] leading-relaxed">
-                AI가 자동 편집한 포토북을 확인하고 원하는 수량만큼 주문하세요.
-              </p>
+
+          {/* Steps */}
+          <div className="relative">
+            {/* Connecting line (desktop) */}
+            <div className="hidden lg:block absolute top-6 left-[16.7%] right-[16.7%] h-[2px]" style={{ background: '#E5E0D8' }} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              {[
+                { num: '1', title: '모임 만들기', desc: '모임을 만들고 멤버를\n초대 링크로 초대하세요' },
+                { num: '2', title: '사진 업로드', desc: '멤버들이 각자 사진을 올리면\n자동으로 한 곳에 모입니다' },
+                { num: '3', title: '포토북 주문', desc: '자동 편집된 포토북을 확인하고\n주문하면 집까지 배송됩니다' },
+              ].map((step, i) => (
+                <div key={i} className={`animate-fade-up animate-fade-up-delay-${i + 1} flex flex-col items-center text-center gap-4`}>
+                  <div
+                    className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-white text-[20px] font-bold shadow-lg transition-transform hover:scale-110"
+                    style={{ background: '#D4916E', fontFamily: '"Geist Mono", monospace', boxShadow: '0 4px 16px rgba(212,145,110,0.35)' }}
+                  >
+                    {step.num}
+                  </div>
+                  <h3 className="text-[18px] font-semibold" style={{ color: '#1A1A1A' }}>{step.title}</h3>
+                  <p className="text-[14px] leading-[1.6] whitespace-pre-line" style={{ color: '#6B6B6B' }}>{step.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-ink px-6 py-12 lg:py-20 flex flex-col items-center text-center">
-        <h2 className="font-display font-bold text-white text-2xl lg:text-4xl mb-4">
-          지금 바로 시작해보세요
-        </h2>
-        <p className="text-white/70 text-[13px] lg:text-base mb-8 max-w-md">
-          무료로 모임을 만들고 첫 번째 포토북을 완성해보세요. 특별한 순간이 아름다운 책이 됩니다.
-        </p>
-        <Link
-          to="/signup"
-          className="w-full lg:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-full h-12 lg:h-[52px] px-9 transition-colors"
-        >
-          무료로 시작하기
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </Link>
+      {/* ── CTA Section ── */}
+      <section className="relative overflow-hidden px-6 lg:px-20 py-16 lg:py-20 flex flex-col items-center text-center" style={{ background: '#1A1A1A' }}>
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl" style={{ background: '#D4916E' }} />
+
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <h2 className="animate-fade-up font-display font-bold text-white text-[24px] lg:text-[36px] text-center max-w-[700px] leading-tight">
+            지금 바로 우리 모임 포토북을 만들어보세요
+          </h2>
+          <p className="animate-fade-up animate-fade-up-delay-1 text-[14px] lg:text-[16px] text-center max-w-[600px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            무료로 시작하고, 마음에 들면 주문하세요. 가입비 없이 바로 사용할 수 있습니다.
+          </p>
+          <Link
+            to="/signup"
+            className="animate-fade-up animate-fade-up-delay-2 group flex items-center justify-center gap-2 rounded-full h-[52px] px-9 text-[16px] font-semibold text-white transition-all hover:shadow-lg active:scale-[0.98]"
+            style={{ background: '#D4916E', boxShadow: '0 4px 20px rgba(212,145,110,0.3)' }}
+          >
+            무료로 시작하기
+            <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer id="pricing" className="bg-ink px-6 lg:px-20">
-        <div className="border-t border-white/10 py-6 lg:h-[72px] lg:py-0 flex flex-col-reverse lg:flex-row lg:items-center justify-between gap-4">
-          <p className="text-white/40 text-[13px] text-center lg:text-left">
-            © 2026 GroupBook. All rights reserved.
-          </p>
-          <div className="flex items-center justify-center gap-6">
-            <a href="#" className="text-white/40 text-[13px] hover:text-white/60 transition-colors">이용약관</a>
-            <a href="#" className="text-white/40 text-[13px] hover:text-white/60 transition-colors">개인정보처리방침</a>
-            <a href="#" className="text-white/40 text-[13px] hover:text-white/60 transition-colors">문의하기</a>
-          </div>
+      {/* ── Footer ── */}
+      <footer className="flex flex-col-reverse lg:flex-row lg:items-center justify-between px-6 lg:px-20 py-6 lg:h-[72px] lg:py-0 gap-4" style={{ background: '#1A1A1A' }}>
+        <p className="text-[13px] text-center lg:text-left" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          © 2026 GroupBook. All rights reserved.
+        </p>
+        <div className="flex items-center justify-center gap-6">
+          {['이용약관', '개인정보처리방침', '문의하기'].map((label) => (
+            <a key={label} href="#" className="text-[13px] transition-colors hover:text-white/60" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {label}
+            </a>
+          ))}
         </div>
       </footer>
     </div>

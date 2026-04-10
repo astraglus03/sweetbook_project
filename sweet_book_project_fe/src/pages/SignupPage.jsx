@@ -22,7 +22,7 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex page-enter">
       {/* Left panel — desktop only */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#D4916E] flex-col justify-between px-[60px] py-[60px]">
         {/* Logo */}

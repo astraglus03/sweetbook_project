@@ -23,7 +23,7 @@ export function GroupCard({ group }) {
     <button
       type="button"
       onClick={() => navigate(`/groups/${group.id}`)}
-      className="w-full text-left bg-white rounded-xl border border-warm-border overflow-hidden hover:shadow-md transition-shadow
+      className="w-full text-left bg-white rounded-xl border border-warm-border overflow-hidden hover-lift
         flex flex-row sm:flex-col"
     >
       {/* Cover image */}
