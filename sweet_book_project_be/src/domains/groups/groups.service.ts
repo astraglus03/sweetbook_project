@@ -1,4 +1,325 @@
 import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import * as crypto from 'crypto';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  ValidationException,
+} from '../../common/exceptions';
+import { GroupsRepository } from './groups.repository';
+import { GroupMembersRepository } from './group-members.repository';
+import { CreateGroupDto } from './dto/create-group.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
+import { TransferOwnerDto } from './dto/transfer-owner.dto';
+import { GroupListQueryDto } from './dto/group-list-query.dto';
+import {
+  GroupResponseDto,
+  GroupDetailResponseDto,
+} from './dto/group-response.dto';
+import { Group } from './entities/group.entity';
+import { GroupMember } from './entities/group-member.entity';
+
+const MAX_INVITE_CODE_RETRIES = 3;
 
 @Injectable()
-export class GroupsService {}
+export class GroupsService {
+  constructor(
+    private readonly groupsRepository: GroupsRepository,
+    private readonly groupMembersRepository: GroupMembersRepository,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async createGroup(
+    userId: number,
+    dto: CreateGroupDto,
+  ): Promise<GroupResponseDto> {
+    const inviteCode = await this.generateInviteCode();
+
+    const group = this.groupsRepository.create({
+      name: dto.name,
+      description: dto.description ?? null,
+      inviteCode,
+      ownerId: userId,
+      eventDate: dto.eventDate ?? null,
+      uploadDeadline: dto.uploadDeadline ? new Date(dto.uploadDeadline) : null,
+      year: dto.year ?? null,
+      parentGroupId: dto.parentGroupId ?? null,
+    });
+    const savedGroup = await this.groupsRepository.save(group);
+
+    const member = this.groupMembersRepository.create({
+      groupId: savedGroup.id,
+      userId,
+      role: 'OWNER',
+    });
+    await this.groupMembersRepository.save(member);
+
+    return GroupResponseDto.from(savedGroup, 1);
+  }
+
+  async getMyGroups(
+    userId: number,
+    query: GroupListQueryDto,
+  ): Promise<{ groups: GroupResponseDto[]; meta: Record<string, number> }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const [groups, total] = await this.groupsRepository.findUserGroups(
+      userId,
+      page,
+      limit,
+      query.search,
+    );
+
+    return {
+      groups: groups.map((g) =>
+        GroupResponseDto.from(g, (g as Group & { memberCount: number }).memberCount),
+      ),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getGroupDetail(
+    groupId: number,
+    userId: number,
+  ): Promise<GroupDetailResponseDto> {
+    const group = await this.groupsRepository.findByIdWithMembers(groupId);
+    if (!group) {
+      throw new NotFoundException(
+        'GROUP_NOT_FOUND',
+        '모임을 찾을 수 없습니다',
+      );
+    }
+
+    const isMember = group.members.some((m) => m.userId === userId);
+    if (!isMember) {
+      throw new ForbiddenException(
+        'GROUP_NOT_MEMBER',
+        '모임 멤버만 접근할 수 있습니다',
+      );
+    }
+
+    return GroupDetailResponseDto.fromDetail(group);
+  }
+
+  async updateGroup(
+    groupId: number,
+    userId: number,
+    dto: UpdateGroupDto,
+  ): Promise<GroupResponseDto> {
+    const group = await this.findGroupOrFail(groupId);
+    this.verifyOwner(group, userId);
+
+    if (dto.name !== undefined) group.name = dto.name;
+    if (dto.description !== undefined) group.description = dto.description;
+    if (dto.coverImage !== undefined) group.coverImage = dto.coverImage;
+    if (dto.eventDate !== undefined) group.eventDate = dto.eventDate;
+    if (dto.uploadDeadline !== undefined) {
+      group.uploadDeadline = dto.uploadDeadline
+        ? new Date(dto.uploadDeadline)
+        : null;
+    }
+    if (dto.year !== undefined) group.year = dto.year;
+
+    const saved = await this.groupsRepository.save(group);
+    const memberCount = await this.groupMembersRepository.countByGroup(groupId);
+    return GroupResponseDto.from(saved, memberCount);
+  }
+
+  async deleteGroup(groupId: number, userId: number): Promise<void> {
+    const group = await this.findGroupOrFail(groupId);
+    this.verifyOwner(group, userId);
+
+    group.status = 'DELETED';
+    await this.groupsRepository.save(group);
+  }
+
+  async getGroupByInviteCode(code: string): Promise<GroupResponseDto> {
+    const group = await this.groupsRepository.findByInviteCode(code);
+    if (!group || group.status === 'DELETED') {
+      throw new NotFoundException(
+        'GROUP_INVITE_NOT_FOUND',
+        '유효하지 않은 초대 코드입니다',
+      );
+    }
+
+    const memberCount = await this.groupMembersRepository.countByGroup(
+      group.id,
+    );
+    return GroupResponseDto.from(group, memberCount);
+  }
+
+  async joinGroup(
+    groupId: number,
+    userId: number,
+    inviteCode: string,
+  ): Promise<GroupResponseDto> {
+    const group = await this.findGroupOrFail(groupId);
+
+    if (group.inviteCode !== inviteCode) {
+      throw new NotFoundException(
+        'GROUP_INVITE_NOT_FOUND',
+        '유효하지 않은 초대 코드입니다',
+      );
+    }
+
+    const existing = await this.groupMembersRepository.findByGroupAndUser(
+      groupId,
+      userId,
+    );
+    if (existing) {
+      throw new ConflictException(
+        'GROUP_ALREADY_MEMBER',
+        '이미 참여한 모임입니다',
+      );
+    }
+
+    const member = this.groupMembersRepository.create({
+      groupId,
+      userId,
+      role: 'MEMBER',
+    });
+    await this.groupMembersRepository.save(member);
+
+    const memberCount = await this.groupMembersRepository.countByGroup(groupId);
+    return GroupResponseDto.from(group, memberCount);
+  }
+
+  async leaveGroup(groupId: number, userId: number): Promise<void> {
+    const membership = await this.findMembershipOrFail(groupId, userId);
+
+    if (membership.role === 'OWNER') {
+      throw new ForbiddenException(
+        'GROUP_OWNER_CANNOT_LEAVE',
+        '방장은 위임 후 탈퇴할 수 있습니다',
+      );
+    }
+
+    await this.groupMembersRepository.remove(membership);
+  }
+
+  async removeMember(
+    groupId: number,
+    targetUserId: number,
+    currentUserId: number,
+  ): Promise<void> {
+    const group = await this.findGroupOrFail(groupId);
+    this.verifyOwner(group, currentUserId);
+
+    if (targetUserId === currentUserId) {
+      throw new ValidationException(
+        'GROUP_CANNOT_KICK_SELF',
+        '자기 자신을 강퇴할 수 없습니다',
+      );
+    }
+
+    const targetMembership = await this.findMembershipOrFail(
+      groupId,
+      targetUserId,
+    );
+    await this.groupMembersRepository.remove(targetMembership);
+  }
+
+  async transferOwner(
+    groupId: number,
+    currentUserId: number,
+    dto: TransferOwnerDto,
+  ): Promise<void> {
+    const group = await this.findGroupOrFail(groupId);
+    this.verifyOwner(group, currentUserId);
+
+    if (dto.newOwnerId === currentUserId) {
+      throw new ValidationException(
+        'GROUP_TRANSFER_SELF',
+        '자기 자신에게 위임할 수 없습니다',
+      );
+    }
+
+    const newOwnerMembership = await this.groupMembersRepository.findByGroupAndUser(
+      groupId,
+      dto.newOwnerId,
+    );
+    if (!newOwnerMembership) {
+      throw new NotFoundException(
+        'GROUP_MEMBER_NOT_FOUND',
+        '해당 멤버를 찾을 수 없습니다',
+      );
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const currentOwnerMembership = await this.findMembershipOrFail(
+        groupId,
+        currentUserId,
+      );
+      currentOwnerMembership.role = 'MEMBER';
+      newOwnerMembership.role = 'OWNER';
+      group.ownerId = dto.newOwnerId;
+
+      await queryRunner.manager.save(currentOwnerMembership);
+      await queryRunner.manager.save(newOwnerMembership);
+      await queryRunner.manager.save(group);
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private async findGroupOrFail(groupId: number): Promise<Group> {
+    const group = await this.groupsRepository.findById(groupId);
+    if (!group || group.status === 'DELETED') {
+      throw new NotFoundException(
+        'GROUP_NOT_FOUND',
+        '모임을 찾을 수 없습니다',
+      );
+    }
+    return group;
+  }
+
+  private async findMembershipOrFail(
+    groupId: number,
+    userId: number,
+  ): Promise<GroupMember> {
+    const membership = await this.groupMembersRepository.findByGroupAndUser(
+      groupId,
+      userId,
+    );
+    if (!membership) {
+      throw new NotFoundException(
+        'GROUP_MEMBER_NOT_FOUND',
+        '모임 멤버가 아닙니다',
+      );
+    }
+    return membership;
+  }
+
+  private verifyOwner(group: Group, userId: number): void {
+    if (group.ownerId !== userId) {
+      throw new ForbiddenException(
+        'GROUP_NOT_OWNER',
+        '방장만 수행할 수 있습니다',
+      );
+    }
+  }
+
+  private async generateInviteCode(): Promise<string> {
+    for (let i = 0; i < MAX_INVITE_CODE_RETRIES; i++) {
+      const code = crypto.randomBytes(4).toString('hex');
+      const existing = await this.groupsRepository.findByInviteCode(code);
+      if (!existing) return code;
+    }
+    throw new Error('초대 코드 생성에 실패했습니다');
+  }
+}
