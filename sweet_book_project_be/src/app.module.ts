@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './config/typeorm.config';
 import { validateEnv } from './config/env.validation';
+import { RedisModule } from './config/redis.provider';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AuthModule } from './domains/auth/auth.module';
 import { UsersModule } from './domains/users/users.module';
 import { GroupsModule } from './domains/groups/groups.module';
@@ -27,6 +29,7 @@ import { OpenAiModule } from './external/openai/openai.module';
       inject: [ConfigService],
       useFactory: typeOrmConfig,
     }),
+    RedisModule,
     AuthModule,
     UsersModule,
     GroupsModule,
@@ -40,6 +43,7 @@ import { OpenAiModule } from './external/openai/openai.module';
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}
