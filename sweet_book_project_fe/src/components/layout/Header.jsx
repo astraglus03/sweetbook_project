@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom';
+import { useMe } from '../../features/auth/hooks/useAuth';
 
 export function Header() {
+  const { data: user } = useMe();
+
   return (
     <header className="hidden lg:block h-14 bg-white border-b border-warm-border">
       <div className="max-w-6xl mx-auto px-6 h-full flex justify-between items-center">
@@ -39,7 +42,15 @@ export function Header() {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
           </button>
-          <div className="w-8 h-8 rounded-full bg-brand" />
+          <div className="w-8 h-8 rounded-full bg-brand overflow-hidden flex items-center justify-center">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white text-xs font-semibold">
+                {user?.name?.[0] ?? '?'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </header>

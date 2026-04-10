@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useMe } from '../features/auth/hooks/useAuth';
 
 export function LandingPage() {
+  const { data: user } = useMe();
+  const isLoggedIn = !!user;
+
   return (
     <div className="min-h-screen font-sans overflow-x-hidden" style={{ background: '#F3EBE2' }}>
       {/* ── Navbar (Desktop) ── */}
@@ -17,12 +21,20 @@ export function LandingPage() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/login" className="text-[14px] font-medium px-4 h-10 flex items-center rounded-full transition-colors hover:bg-black/5" style={{ color: '#3D3D3D' }}>
-            로그인
-          </Link>
-          <Link to="/signup" className="text-[14px] font-semibold text-white rounded-full px-5 h-10 flex items-center transition-all hover:opacity-90" style={{ background: '#1A1A1A' }}>
-            시작하기
-          </Link>
+          {isLoggedIn ? (
+            <Link to="/groups" className="text-[14px] font-semibold text-white rounded-full px-5 h-10 flex items-center transition-all hover:opacity-90" style={{ background: '#D4916E' }}>
+              내 모임으로
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="text-[14px] font-medium px-4 h-10 flex items-center rounded-full transition-colors hover:bg-black/5" style={{ color: '#3D3D3D' }}>
+                로그인
+              </Link>
+              <Link to="/signup" className="text-[14px] font-semibold text-white rounded-full px-5 h-10 flex items-center transition-all hover:opacity-90" style={{ background: '#1A1A1A' }}>
+                시작하기
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -34,13 +46,19 @@ export function LandingPage() {
           </svg>
           <span className="font-display font-bold text-[18px]" style={{ color: '#1A1A1A' }}>GroupBook</span>
         </div>
-        <Link to="/signup" className="text-[13px] font-semibold text-white rounded-full px-4 py-2 transition-colors hover:opacity-90" style={{ background: '#1A1A1A' }}>
-          시작하기
-        </Link>
+        {isLoggedIn ? (
+          <Link to="/groups" className="text-[13px] font-semibold text-white rounded-full px-4 py-2 transition-colors hover:opacity-90" style={{ background: '#D4916E' }}>
+            내 모임
+          </Link>
+        ) : (
+          <Link to="/signup" className="text-[13px] font-semibold text-white rounded-full px-4 py-2 transition-colors hover:opacity-90" style={{ background: '#1A1A1A' }}>
+            시작하기
+          </Link>
+        )}
       </nav>
 
       {/* ── Hero Section ── */}
-      <section className="flex flex-col items-center px-6 lg:px-20 pt-12 lg:pt-20 pb-10 lg:pb-[60px]" style={{ background: '#F3EBE2' }}>
+      <section className="flex flex-col items-center px-6 lg:px-20 pt-12 lg:pt-20 pb-16 lg:pb-[60px]" style={{ background: '#F3EBE2' }}>
         {/* Tag */}
         <div className="animate-fade-up flex items-center gap-2 rounded-full px-5 py-2 mb-10" style={{ background: '#C5BEB6' }}>
           <svg className="w-4 h-4" style={{ color: '#1A1A1A' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,13 +79,13 @@ export function LandingPage() {
         </div>
 
         {/* Hero Buttons */}
-        <div className="animate-fade-up animate-fade-up-delay-2 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-12 lg:mb-10">
+        <div className="animate-fade-up animate-fade-up-delay-2 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-14 lg:mb-12">
           <Link
-            to="/signup"
+            to={isLoggedIn ? '/groups' : '/signup'}
             className="group w-full sm:w-auto flex items-center justify-center gap-2 rounded-full h-[52px] px-8 text-[16px] font-semibold text-white transition-all hover:shadow-lg hover:shadow-brand/25 active:scale-[0.98]"
             style={{ background: '#D4916E' }}
           >
-            무료로 시작하기
+            {isLoggedIn ? '내 모임으로' : '무료로 시작하기'}
             <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
@@ -82,33 +100,33 @@ export function LandingPage() {
         </div>
 
         {/* Hero Preview — 3-column photo grid */}
-        <div className="animate-fade-up animate-fade-up-delay-3 w-full max-w-[1100px] grid grid-cols-2 lg:grid-cols-3 gap-4 h-auto lg:h-[480px]">
+        <div className="animate-fade-up animate-fade-up-delay-3 w-full max-w-[1100px] grid grid-cols-2 lg:grid-cols-3 gap-4" style={{ height: 'auto' }}>
           {/* Col 1 */}
-          <div className="flex flex-col gap-4 h-[320px] lg:h-full">
-            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-rose-200 to-orange-100 hover-lift">
+          <div className="flex flex-col gap-4" style={{ height: '320px' }}>
+            <div className="flex-1 rounded-2xl overflow-hidden hover-lift min-h-0">
               <img src="https://images.unsplash.com/photo-1759567153576-abdd893a9065?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
             </div>
-            <div className="h-[160px] rounded-2xl flex flex-col justify-end p-6 hover-lift" style={{ background: '#D4916E' }}>
-              <span className="text-white text-[36px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>1,200+</span>
+            <div className="h-[140px] rounded-2xl flex flex-col justify-end p-6 hover-lift flex-shrink-0" style={{ background: '#D4916E' }}>
+              <span className="text-white text-[32px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>1,200+</span>
               <span className="text-white/80 text-[14px] font-medium">포토북 제작 완료</span>
             </div>
           </div>
           {/* Col 2 */}
-          <div className="flex flex-col gap-4 h-[320px] lg:h-full">
-            <div className="h-[200px] rounded-2xl flex flex-col justify-end p-6 hover-lift" style={{ background: '#1A1A1A' }}>
-              <span className="text-white text-[36px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>98%</span>
+          <div className="flex flex-col gap-4" style={{ height: '320px' }}>
+            <div className="h-[180px] rounded-2xl flex flex-col justify-end p-6 hover-lift flex-shrink-0" style={{ background: '#1A1A1A' }}>
+              <span className="text-white text-[32px] font-bold" style={{ fontFamily: '"Geist Mono", monospace' }}>98%</span>
               <span className="text-white/80 text-[14px] font-medium">만족도</span>
             </div>
-            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-200 to-indigo-100 hover-lift">
+            <div className="flex-1 rounded-2xl overflow-hidden hover-lift min-h-0">
               <img src="https://images.unsplash.com/photo-1559136646-8d0d1f46a146?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
             </div>
           </div>
           {/* Col 3 (desktop only) */}
-          <div className="hidden lg:flex flex-col gap-4 h-full">
-            <div className="flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-200 to-teal-100 hover-lift">
+          <div className="hidden lg:flex flex-col gap-4" style={{ height: '320px' }}>
+            <div className="flex-1 rounded-2xl overflow-hidden hover-lift min-h-0">
               <img src="https://images.unsplash.com/photo-1699519323453-fec3a921407d?w=540&q=80" alt="" className="w-full h-full object-cover" loading="lazy" />
             </div>
-            <div className="h-[180px] rounded-2xl flex flex-col items-center justify-center gap-2 hover-lift" style={{ background: '#3D3D3D' }}>
+            <div className="h-[140px] rounded-2xl flex flex-col items-center justify-center gap-2 hover-lift flex-shrink-0" style={{ background: '#3D3D3D' }}>
               <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -119,9 +137,8 @@ export function LandingPage() {
       </section>
 
       {/* ── Features Section ── */}
-      <section id="features" className="px-6 lg:px-20 py-16 lg:py-20">
+      <section id="features" className="px-6 lg:px-20 py-16 lg:py-20" style={{ background: '#F3EBE2' }}>
         <div className="max-w-[1280px] mx-auto">
-          {/* Header */}
           <div className="animate-fade-up flex flex-col items-center gap-4 mb-12 max-w-[600px] mx-auto text-center">
             <span className="text-[13px] font-semibold" style={{ color: '#D4916E' }}>주요 기능</span>
             <h2 className="font-display font-bold text-[26px] lg:text-[36px]" style={{ color: '#1A1A1A' }}>
@@ -132,7 +149,6 @@ export function LandingPage() {
             </p>
           </div>
 
-          {/* Feature Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {[
               {
@@ -153,7 +169,7 @@ export function LandingPage() {
             ].map((f, i) => (
               <div
                 key={i}
-                className={`animate-fade-up animate-fade-up-delay-${i + 1} hover-lift bg-white rounded-2xl p-8 gap-5 flex flex-col`}
+                className={`animate-fade-up animate-fade-up-delay-${i + 1} hover-lift bg-white rounded-2xl p-8 flex flex-col gap-5`}
                 style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
               >
                 <div className="w-14 h-14 rounded-[14px] flex items-center justify-center" style={{ background: '#D4916E22' }}>
@@ -170,7 +186,6 @@ export function LandingPage() {
       {/* ── How It Works ── */}
       <section id="how-it-works" className="bg-white px-6 lg:px-20 py-16 lg:py-20">
         <div className="max-w-[1080px] mx-auto">
-          {/* Header */}
           <div className="animate-fade-up flex flex-col items-center gap-4 mb-12 max-w-[600px] mx-auto text-center">
             <span className="text-[13px] font-semibold" style={{ color: '#D4916E' }}>이용 방법</span>
             <h2 className="font-display font-bold text-[26px] lg:text-[36px]" style={{ color: '#1A1A1A' }}>
@@ -178,11 +193,8 @@ export function LandingPage() {
             </h2>
           </div>
 
-          {/* Steps */}
           <div className="relative">
-            {/* Connecting line (desktop) */}
             <div className="hidden lg:block absolute top-6 left-[16.7%] right-[16.7%] h-[2px]" style={{ background: '#E5E0D8' }} />
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               {[
                 { num: '1', title: '모임 만들기', desc: '모임을 만들고 멤버를\n초대 링크로 초대하세요' },
@@ -191,7 +203,7 @@ export function LandingPage() {
               ].map((step, i) => (
                 <div key={i} className={`animate-fade-up animate-fade-up-delay-${i + 1} flex flex-col items-center text-center gap-4`}>
                   <div
-                    className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-white text-[20px] font-bold shadow-lg transition-transform hover:scale-110"
+                    className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center text-white text-[20px] font-bold transition-transform hover:scale-110"
                     style={{ background: '#D4916E', fontFamily: '"Geist Mono", monospace', boxShadow: '0 4px 16px rgba(212,145,110,0.35)' }}
                   >
                     {step.num}
@@ -207,9 +219,7 @@ export function LandingPage() {
 
       {/* ── CTA Section ── */}
       <section className="relative overflow-hidden px-6 lg:px-20 py-16 lg:py-20 flex flex-col items-center text-center" style={{ background: '#1A1A1A' }}>
-        {/* Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl" style={{ background: '#D4916E' }} />
-
         <div className="relative z-10 flex flex-col items-center gap-8">
           <h2 className="animate-fade-up font-display font-bold text-white text-[24px] lg:text-[36px] text-center max-w-[700px] leading-tight">
             지금 바로 우리 모임 포토북을 만들어보세요
@@ -218,11 +228,11 @@ export function LandingPage() {
             무료로 시작하고, 마음에 들면 주문하세요. 가입비 없이 바로 사용할 수 있습니다.
           </p>
           <Link
-            to="/signup"
+            to={isLoggedIn ? '/groups' : '/signup'}
             className="animate-fade-up animate-fade-up-delay-2 group flex items-center justify-center gap-2 rounded-full h-[52px] px-9 text-[16px] font-semibold text-white transition-all hover:shadow-lg active:scale-[0.98]"
             style={{ background: '#D4916E', boxShadow: '0 4px 20px rgba(212,145,110,0.3)' }}
           >
-            무료로 시작하기
+            {isLoggedIn ? '내 모임으로' : '무료로 시작하기'}
             <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
