@@ -2,7 +2,30 @@
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        brand: {
+          DEFAULT: '#D4916E',
+          light: '#D4916E15',
+          hover: '#C07E5C',
+        },
+        warm: {
+          bg: '#F8F5F0',
+          card: '#FFFFFF',
+          border: '#E5E0D8',
+          tag: '#C5BEB6',
+        },
+        ink: {
+          DEFAULT: '#1A1A1A',
+          sub: '#6B6B6B',
+          muted: '#9B9B9B',
+        },
+      },
+      fontFamily: {
+        display: ['"Playfair Display"', 'serif'],
+        sans: ['Inter', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };

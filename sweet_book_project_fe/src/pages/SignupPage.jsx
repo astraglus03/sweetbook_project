@@ -22,98 +22,143 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-          GroupBook 회원가입
-        </h1>
+    <div className="min-h-screen flex page-enter">
+      {/* Left panel — desktop only */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#D4916E] flex-col justify-between px-[60px] py-[60px]">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 6C2 4.89543 2.89543 4 4 4H10C11.1046 4 12 4.89543 12 6V18C12 16.8954 11.1046 16 10 16H4C2.89543 16 2 15.1046 2 14V6Z" stroke="white" strokeWidth="1.75" strokeLinejoin="round" />
+            <path d="M12 6C12 4.89543 12.8954 4 14 4H20C21.1046 4 22 4.89543 22 6V14C22 15.1046 21.1046 16 20 16H14C12.8954 16 12 15.1046 12 14V6Z" stroke="white" strokeWidth="1.75" strokeLinejoin="round" />
+            <path d="M6 20H18" stroke="white" strokeWidth="1.75" strokeLinecap="round" />
+            <path d="M12 16V20" stroke="white" strokeWidth="1.75" strokeLinecap="round" />
+          </svg>
+          <span className="font-display font-bold text-white text-lg tracking-wide">GroupBook</span>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Headline */}
+        <div>
+          <h2 className="font-display text-4xl text-white leading-tight whitespace-pre-line mb-4">
+            {'모임 사진을\n포토북으로\n간직하세요.'}
+          </h2>
+          <p className="text-white/80 text-sm leading-relaxed whitespace-pre-line">
+            {'500개 이상의 모임이 함께\n아름다운 포토북을 만들고 있습니다.'}
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="flex gap-10">
           <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              이름
-            </label>
-            <input
-              id="name"
-              type="text"
-              required
-              minLength={2}
-              maxLength={50}
-              value={form.name}
-              onChange={handleChange('name')}
-              className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="홍길동"
-            />
+            <p className="text-white font-display font-bold text-2xl">500+</p>
+            <p className="text-white/70 text-sm mt-0.5">모임 제작 완료</p>
+          </div>
+          <div>
+            <p className="text-white font-display font-bold text-2xl">10,000+</p>
+            <p className="text-white/70 text-sm mt-0.5">업로드된 사진</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="w-full lg:w-1/2 bg-[#F8F5F0] flex flex-col items-center justify-center px-6 py-12">
+        {/* Mobile logo */}
+        <div className="flex lg:hidden flex-col items-center mb-8">
+          <div className="flex items-center gap-2 mb-1">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 6C2 4.89543 2.89543 4 4 4H10C11.1046 4 12 4.89543 12 6V18C12 16.8954 11.1046 16 10 16H4C2.89543 16 2 15.1046 2 14V6Z" stroke="#D4916E" strokeWidth="1.75" strokeLinejoin="round" />
+              <path d="M12 6C12 4.89543 12.8954 4 14 4H20C21.1046 4 22 4.89543 22 6V14C22 15.1046 21.1046 16 20 16H14C12.8954 16 12 15.1046 12 14V6Z" stroke="#D4916E" strokeWidth="1.75" strokeLinejoin="round" />
+              <path d="M6 20H18" stroke="#D4916E" strokeWidth="1.75" strokeLinecap="round" />
+              <path d="M12 16V20" stroke="#D4916E" strokeWidth="1.75" strokeLinecap="round" />
+            </svg>
+            <span className="font-display font-bold text-[#1A1A1A] text-lg tracking-wide">GroupBook</span>
+          </div>
+        </div>
+
+        <div className="w-full max-w-[380px]">
+          {/* Header */}
+          <div className="mb-7">
+            <h1 className="font-display text-2xl font-bold text-[#1A1A1A] mb-1.5">회원가입</h1>
+            <p className="text-[#6B6B6B] text-sm">무료로 시작하세요</p>
           </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              이메일
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={form.email}
-              onChange={handleChange('email')}
-              className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="hong@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              비밀번호 (8자 이상)
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              maxLength={64}
-              autoComplete="new-password"
-              value={form.password}
-              onChange={handleChange('password')}
-              className="w-full h-12 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="최소 8자"
-            />
-          </div>
-
-          {signup.isError && (
-            <div
-              role="alert"
-              className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700"
-            >
-              {signup.error?.response?.data?.error?.message ||
-                '회원가입에 실패했습니다'}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-[13px] font-medium text-[#1A1A1A] mb-1.5">
+                이름
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                minLength={2}
+                maxLength={50}
+                value={form.name}
+                onChange={handleChange('name')}
+                className="w-full h-12 px-3.5 bg-white border border-[#E5E0D8] rounded-[10px] text-[#1A1A1A] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#D4916E] focus:border-transparent transition"
+                placeholder="홍길동"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={signup.isPending}
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md disabled:opacity-50"
-          >
-            {signup.isPending ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
+            <div>
+              <label htmlFor="email" className="block text-[13px] font-medium text-[#1A1A1A] mb-1.5">
+                이메일
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange('email')}
+                className="w-full h-12 px-3.5 bg-white border border-[#E5E0D8] rounded-[10px] text-[#1A1A1A] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#D4916E] focus:border-transparent transition"
+                placeholder="hong@example.com"
+              />
+            </div>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          이미 계정이 있으신가요?{' '}
-          <Link to="/login" className="text-purple-600 font-medium">
-            로그인
-          </Link>
-        </p>
+            <div>
+              <label htmlFor="password" className="block text-[13px] font-medium text-[#1A1A1A] mb-1.5">
+                비밀번호 (8자 이상)
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                minLength={8}
+                maxLength={64}
+                autoComplete="new-password"
+                value={form.password}
+                onChange={handleChange('password')}
+                className="w-full h-12 px-3.5 bg-white border border-[#E5E0D8] rounded-[10px] text-[#1A1A1A] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#D4916E] focus:border-transparent transition"
+                placeholder="최소 8자"
+              />
+            </div>
+
+            {signup.isError && (
+              <div
+                role="alert"
+                className="rounded-[10px] bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700"
+              >
+                {signup.error?.response?.data?.error?.message || '회원가입에 실패했습니다'}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={signup.isPending}
+              className="w-full h-12 bg-[#D4916E] hover:bg-[#C07E5C] text-white font-semibold rounded-full text-sm transition disabled:opacity-50 mt-1"
+            >
+              {signup.isPending ? '가입 중...' : '회원가입'}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <p className="mt-7 text-center text-sm text-[#6B6B6B]">
+            이미 계정이 있으신가요?{' '}
+            <Link to="/login" className="text-[#D4916E] font-semibold hover:underline">
+              로그인
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
