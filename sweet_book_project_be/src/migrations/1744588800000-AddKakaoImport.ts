@@ -6,12 +6,16 @@ export class AddKakaoImport1744588800000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // photos: uploaderId nullable + kakaoName 컬럼 추가
     await queryRunner.query(`ALTER TABLE "photos" ALTER COLUMN "uploaderId" DROP NOT NULL`);
-    await queryRunner.query(`ALTER TABLE "photos" ADD COLUMN "kakaoName" varchar(100)`);
-    await queryRunner.query(`CREATE INDEX "idx_photos_kakao_name" ON "photos" ("groupId", "kakaoName")`);
+    await queryRunner.query(
+      `ALTER TABLE "photos" ADD COLUMN IF NOT EXISTS "kakaoName" varchar(100)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_photos_kakao_name" ON "photos" ("groupId", "kakaoName")`,
+    );
 
     // kakao_name_mappings 테이블
     await queryRunner.query(`
-      CREATE TABLE "kakao_name_mappings" (
+      CREATE TABLE IF NOT EXISTS "kakao_name_mappings" (
         "id" SERIAL PRIMARY KEY,
         "groupId" integer NOT NULL,
         "kakaoName" varchar(100) NOT NULL,
@@ -23,7 +27,7 @@ export class AddKakaoImport1744588800000 implements MigrationInterface {
       )
     `);
     await queryRunner.query(
-      `CREATE UNIQUE INDEX "idx_kakao_mapping_group_name" ON "kakao_name_mappings" ("groupId", "kakaoName")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "idx_kakao_mapping_group_name" ON "kakao_name_mappings" ("groupId", "kakaoName")`,
     );
   }
 
