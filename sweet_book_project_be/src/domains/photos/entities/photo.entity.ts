@@ -15,6 +15,7 @@ import { Group } from '../../groups/entities/group.entity';
 @Index('idx_photos_group_id', ['groupId'])
 @Index('idx_photos_uploader_id', ['uploaderId'])
 @Index('idx_photos_group_chapter', ['groupId', 'chapter'])
+@Index('idx_photos_kakao_name', ['groupId', 'kakaoName'])
 export class Photo {
   @PrimaryGeneratedColumn()
   id: number;
@@ -22,8 +23,11 @@ export class Photo {
   @Column()
   groupId: number;
 
-  @Column()
-  uploaderId: number;
+  @Column({ type: 'int', nullable: true })
+  uploaderId: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  kakaoName: string | null;
 
   @Column({ type: 'varchar', length: 255 })
   filename: string;
@@ -56,7 +60,7 @@ export class Photo {
   @JoinColumn({ name: 'groupId' })
   group: Group;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'uploaderId' })
-  uploader: User;
+  uploader: User | null;
 }
