@@ -13,11 +13,13 @@ import {
 import { Book } from './entities/book.entity';
 import { BookPage } from './entities/book-page.entity';
 import { Photo } from '../photos/entities/photo.entity';
+import { GroupMember } from '../groups/entities/group-member.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { AddPagesDto } from './dto/add-pages.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import { UpdateCoverDto } from './dto/update-cover.dto';
 import { BookResponseDto } from './dto/book-response.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface BookSpec {
   bookSpecUid: string;
@@ -48,8 +50,11 @@ export class BooksService {
     private readonly bookPageRepository: Repository<BookPage>,
     @InjectRepository(Photo)
     private readonly photoRepository: Repository<Photo>,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepository: Repository<GroupMember>,
     private readonly sweetbookApiService: SweetbookApiService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getBookSpecs() {
@@ -495,6 +500,24 @@ export class BooksService {
       book.pageCount = targetPageCount;
       await this.bookRepository.save(book);
       this.logger.log(`Book ${bookId} finalized (${targetPageCount} pages, theme=${theme})`);
+
+      // 그룹 멤버 전원에게 BOOK_READY 알림
+      try {
+        const members = await this.groupMemberRepository.find({
+          where: { groupId: book.groupId },
+        });
+        for (const member of members) {
+          await this.notificationsService.createNotification({
+            userId: member.userId,
+            groupId: book.groupId,
+            type: 'BOOK_READY',
+            title: '포토북이 완성되었습니다',
+            message: `"${book.title}" 포토북이 인쇄 준비를 마쳤어요. 지금 주문할 수 있습니다.`,
+          });
+        }
+      } catch (notifyErr) {
+        this.logger.warn(`BOOK_READY notification failed: ${String(notifyErr)}`);
+      }
     } catch (err) {
       this.logger.error(`Finalization failed: ${err}`);
       book.status = 'FAILED';

@@ -344,6 +344,21 @@ export class OrdersService {
         this.logger.log(
           `Order ${order.id} placed → ${result.orderUid}`,
         );
+
+        // 주문자에게 결제 완료 알림
+        try {
+          await this.notificationsService.createNotification({
+            userId: order.ordererId,
+            groupId: orderGroup.groupId,
+            type: 'ORDER_STATUS',
+            title: '주문이 확정되었습니다',
+            message: `"${book.title}" 포토북 ${order.quantity}권의 주문이 접수되어 곧 제작이 시작됩니다.`,
+          });
+        } catch (notifyErr) {
+          this.logger.warn(
+            `ORDER_STATUS notification failed: ${String(notifyErr)}`,
+          );
+        }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : String(err);

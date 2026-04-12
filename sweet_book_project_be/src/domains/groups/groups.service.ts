@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as crypto from 'crypto';
 import {
@@ -19,15 +19,19 @@ import {
 } from './dto/group-response.dto';
 import { Group } from './entities/group.entity';
 import { GroupMember } from './entities/group-member.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MAX_INVITE_CODE_RETRIES = 3;
 
 @Injectable()
 export class GroupsService {
+  private readonly logger = new Logger(GroupsService.name);
+
   constructor(
     private readonly groupsRepository: GroupsRepository,
     private readonly groupMembersRepository: GroupMembersRepository,
     private readonly dataSource: DataSource,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createGroup(
@@ -186,6 +190,25 @@ export class GroupsService {
       role: 'MEMBER',
     });
     await this.groupMembersRepository.save(member);
+
+    // 방장에게 새 멤버 참여 알림
+    try {
+      const owner = await this.groupMembersRepository.findByGroupAndUser(
+        groupId,
+        group.ownerId,
+      );
+      if (owner && owner.userId !== userId) {
+        await this.notificationsService.createNotification({
+          userId: owner.userId,
+          groupId,
+          type: 'GROUP_INVITE',
+          title: '새 멤버가 참여했어요',
+          message: `"${group.name}"에 새 멤버가 합류했습니다.`,
+        });
+      }
+    } catch (notifyErr) {
+      this.logger.warn(`GROUP_INVITE notification failed: ${String(notifyErr)}`);
+    }
 
     const memberCount = await this.groupMembersRepository.countByGroup(groupId);
     return GroupResponseDto.from(group, memberCount);

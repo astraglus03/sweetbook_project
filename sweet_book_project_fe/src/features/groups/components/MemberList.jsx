@@ -64,7 +64,7 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block bg-white rounded-xl border border-warm-border overflow-hidden">
+      <div className="hidden sm:block bg-white rounded-2xl border border-warm-border overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-warm-border bg-warm-bg/50">
@@ -108,16 +108,20 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
                 </td>
                 {isOwner && (
                   <td className="px-4 py-3 text-right">
-                    {member.userId !== currentUserId && (
-                      <button
-                        type="button"
-                        onClick={() => handleKick(member.userId, member.userName)}
-                        className="px-3 py-1 text-xs font-medium text-red-500 border border-red-200 rounded-full hover:bg-red-50 transition-colors"
-                      >
-                        강퇴
-                      </button>
-                    )}
-                    {member.userId === currentUserId && (
+                    {member.userId !== currentUserId && member.role !== 'OWNER' ? (
+                      <div className="inline-flex gap-1.5">
+                        <button type="button"
+                          onClick={() => handleTransfer(member.userId, member.userName)}
+                          className="px-2.5 py-1 text-[11px] font-medium text-ink-sub border border-warm-border rounded-full bg-white hover:bg-warm-bg transition-colors">
+                          위임
+                        </button>
+                        <button type="button"
+                          onClick={() => handleKick(member.userId, member.userName)}
+                          className="px-2.5 py-1 text-[11px] font-medium text-red-500 border border-red-200 rounded-full hover:bg-red-50 transition-colors">
+                          강퇴
+                        </button>
+                      </div>
+                    ) : (
                       <span className="text-xs text-ink-muted">-</span>
                     )}
                   </td>
@@ -131,7 +135,7 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
       {/* Mobile card list */}
       <ul className="sm:hidden space-y-2">
         {members.map((member) => (
-          <li key={member.id} className="flex items-center gap-3 bg-white rounded-xl border border-warm-border p-3">
+          <li key={member.id} className="flex items-center gap-3 bg-white rounded-2xl border border-warm-border p-3">
             <div className="w-10 h-10 rounded-full bg-brand-light flex-shrink-0 overflow-hidden">
               {member.userAvatarUrl ? (
                 <img src={member.userAvatarUrl} alt="" className="w-full h-full object-cover" />
@@ -150,14 +154,19 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
               </div>
               <span className="text-xs text-ink-muted">사진 {member.uploadCount ?? 0}장</span>
             </div>
-            {isOwner && member.userId !== currentUserId && (
-              <button
-                type="button"
-                onClick={() => handleKick(member.userId, member.userName)}
-                className="px-2.5 py-1 text-xs text-red-500 border border-red-200 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
-              >
-                강퇴
-              </button>
+            {isOwner && member.userId !== currentUserId && member.role !== 'OWNER' && (
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <button type="button"
+                  onClick={() => handleTransfer(member.userId, member.userName)}
+                  className="px-2.5 py-1 text-[11px] text-ink-sub border border-warm-border rounded-full bg-white hover:bg-warm-bg transition-colors">
+                  위임
+                </button>
+                <button type="button"
+                  onClick={() => handleKick(member.userId, member.userName)}
+                  className="px-2.5 py-1 text-[11px] text-red-500 border border-red-200 rounded-full hover:bg-red-50 transition-colors">
+                  강퇴
+                </button>
+              </div>
             )}
           </li>
         ))}

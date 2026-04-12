@@ -57,7 +57,7 @@ export function PhotoGallery({ groupId, onUploadClick }) {
   return (
     <div className="flex gap-5">
       {/* Sidebar — desktop only */}
-      <aside className="hidden lg:block w-[240px] flex-shrink-0 bg-white rounded-xl border border-warm-border p-4">
+      <aside className="hidden lg:block w-[240px] flex-shrink-0 bg-white rounded-2xl border border-warm-border p-4">
         <h3 className="text-sm font-bold text-ink mb-4">사진 필터</h3>
 
         {/* Chapters */}
@@ -146,19 +146,16 @@ export function PhotoGallery({ groupId, onUploadClick }) {
         </div>
 
         {photos.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-light flex items-center justify-center">
-              <svg className="w-8 h-8 text-brand/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-2xl border border-warm-border p-10 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-warm-bg flex items-center justify-center text-ink-muted/50">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="text-sm text-ink mb-1">아직 사진이 없습니다</p>
+            <p className="text-sm font-medium text-ink mb-1">아직 사진이 없습니다</p>
             <p className="text-xs text-ink-muted mb-4">첫 번째 사진을 업로드해보세요</p>
-            <button
-              type="button"
-              onClick={onUploadClick}
-              className="px-5 py-2.5 text-sm font-medium text-brand bg-brand-light rounded-full hover:bg-brand/20 transition-colors"
-            >
+            <button type="button" onClick={onUploadClick}
+              className="h-10 px-5 text-sm font-semibold text-white bg-brand rounded-full hover:bg-brand-hover transition-colors shadow-sm">
               사진 업로드
             </button>
           </div>
@@ -195,24 +192,20 @@ export function PhotoGallery({ groupId, onUploadClick }) {
 
             {/* Pagination */}
             {meta && meta.totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-6">
-                <button
-                  type="button"
+              <div className="flex justify-center items-center gap-3 mt-6">
+                <button type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1.5 text-sm border border-warm-border rounded-full text-ink-sub disabled:opacity-40 hover:bg-warm-bg transition-colors"
-                >
+                  className="h-9 px-4 text-sm font-medium bg-white border border-warm-border rounded-full text-ink-sub disabled:opacity-40 hover:bg-warm-bg transition-colors">
                   이전
                 </button>
-                <span className="text-sm text-ink-muted">
+                <span className="text-sm text-ink-muted font-medium">
                   {page} / {meta.totalPages}
                 </span>
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                   disabled={page >= meta.totalPages}
-                  className="px-3 py-1.5 text-sm border border-warm-border rounded-full text-ink-sub disabled:opacity-40 hover:bg-warm-bg transition-colors"
-                >
+                  className="h-9 px-4 text-sm font-medium bg-white border border-warm-border rounded-full text-ink-sub disabled:opacity-40 hover:bg-warm-bg transition-colors">
                   다음
                 </button>
               </div>
