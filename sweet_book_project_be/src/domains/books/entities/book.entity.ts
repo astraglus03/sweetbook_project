@@ -84,6 +84,12 @@ export class Book {
   @Column({ type: 'boolean', default: false })
   isShared: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  coverTemplateUid: string | null;
+
+  @Column({ type: 'json', nullable: true })
+  coverParams: Record<string, string> | null;
+
   @Column()
   createdById: number;
 

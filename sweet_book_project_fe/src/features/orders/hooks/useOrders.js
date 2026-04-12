@@ -62,6 +62,15 @@ export function useSubmitShipping(orderGroupId) {
   });
 }
 
+export function useRemindMembers(orderGroupId) {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await ordersApi.remindMembers(orderGroupId);
+      return res.data;
+    },
+  });
+}
+
 export function useConfirmAndPlace(orderGroupId) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -97,5 +106,29 @@ export function useCancelOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
+  });
+}
+
+export function useRejectOrder(orderGroupId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ rejectReason }) => {
+      const res = await ordersApi.rejectOrder(orderGroupId, rejectReason);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+export function useGroupMembersStatus(orderGroupId) {
+  return useQuery({
+    queryKey: ['orders', 'groups', orderGroupId, 'membersStatus'],
+    queryFn: async () => {
+      const res = await ordersApi.getGroupMembersStatus(orderGroupId);
+      return res.data;
+    },
+    enabled: !!orderGroupId,
   });
 }

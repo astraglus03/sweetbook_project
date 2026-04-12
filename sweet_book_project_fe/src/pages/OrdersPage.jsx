@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMyOrders, useCancelOrder } from '../features/orders/hooks/useOrders';
+import { useMyBooks } from '../features/books/hooks/useBooks';
 
 const STATUS_STEPS = [
   { key: 'order', label: '주문', statuses: ['PAID', 'PDF_READY'] },
@@ -208,9 +209,11 @@ function OrderCard({ order }) {
 
 export function OrdersPage() {
   const navigate = useNavigate();
-  const { data: orders, isLoading } = useMyOrders();
+  const [activeTab, setActiveTab] = useState('cart'); // 'cart' | 'orders'
+  const { data: orders, isLoading: ordersLoading } = useMyOrders();
+  const { data: myBooks, isLoading: booksLoading } = useMyBooks();
 
-  if (isLoading) {
+  if (ordersLoading || booksLoading) {
     return (
       <div className="min-h-screen bg-warm-bg flex items-center justify-center pb-20 lg:pb-0">
         <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
@@ -219,53 +222,125 @@ export function OrdersPage() {
   }
 
   const orderList = orders ?? [];
-  const activeOrders = orderList.filter(
-    (o) => !['DELIVERED', 'CANCELLED', 'CANCELLED_REFUND'].includes(o.status),
-  );
-  const completedOrders = orderList.filter(
-    (o) => ['DELIVERED', 'CANCELLED', 'CANCELLED_REFUND'].includes(o.status),
-  );
+  const activeOrders = orderList.filter((o) => !['DELIVERED', 'CANCELLED', 'CANCELLED_REFUND'].includes(o.status));
+  const completedOrders = orderList.filter((o) => ['DELIVERED', 'CANCELLED', 'CANCELLED_REFUND'].includes(o.status));
+
+  const bookList = myBooks ?? [];
+  const pendingBooks = bookList.filter((b) => b.status === 'READY' || b.status === 'ORDERED' || b.status === 'DRAFT' || b.status === 'PROCESSING');
+
+
 
   return (
     <div className="min-h-screen bg-warm-bg pb-20 lg:pb-0">
       <div className="max-w-3xl mx-auto px-4 lg:px-10 py-6 lg:py-8">
-        <h1 className="text-xl font-bold text-ink mb-5">주문 내역</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold text-ink">내 활동내역</h1>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex gap-6 border-b border-warm-border mb-6">
+          <button
+            onClick={() => setActiveTab('cart')}
+            className={`pb-3 text-[15px] font-semibold transition-colors ${activeTab === 'cart' ? 'text-ink border-b-2 border-ink' : 'text-ink-muted hover:text-ink'}`}
+          >
+            포토북 작업함 (장바구니)
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`pb-3 text-[15px] font-semibold transition-colors ${activeTab === 'orders' ? 'text-ink border-b-2 border-ink' : 'text-ink-muted hover:text-ink'}`}
+          >
+            결제 및 주문 내역
+          </button>
+        </div>
 
-        {orderList.length === 0 ? (
-          <div className="bg-white rounded-xl border border-warm-border p-10 text-center">
-            <svg className="w-12 h-12 mx-auto mb-3 text-ink-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <p className="text-sm text-ink-sub">아직 주문 내역이 없습니다</p>
-            <button type="button" onClick={() => navigate('/groups')}
-              className="mt-4 h-9 px-5 text-sm font-medium text-brand border border-brand rounded-full hover:bg-brand/5 transition-colors">
-              모임 둘러보기
-            </button>
-          </div>
+        {activeTab === 'cart' ? (
+          /* 장바구니 탭 */
+          pendingBooks.length === 0 ? (
+            <div className="bg-white rounded-xl border border-warm-border p-10 text-center">
+              <svg className="w-12 h-12 mx-auto mb-3 text-ink-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <p className="text-sm text-ink-sub">작업 중이거나 결제 대기 중인 포토북이 없습니다.</p>
+              <button type="button" onClick={() => navigate('/groups')} className="mt-4 h-9 px-5 text-sm font-medium text-brand border border-brand rounded-full hover:bg-brand/5">
+                모임 둘러보기
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingBooks.map((book) => (
+                <div key={book.id} className="bg-white border flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-warm-border rounded-xl p-5">
+                  <div>
+                    <h3 className="text-base font-bold text-ink mb-1">{book.title}</h3>
+                    <p className="text-[13px] text-ink-muted mb-2">
+                      상태: <span className="font-semibold text-ink-sub">
+                        {book.status === 'READY' ? '결제 대기 (최종화 됨)' :
+                         book.status === 'DRAFT' ? '편집 중' :
+                         book.status === 'PROCESSING' ? 'PDF 변환 중' : book.status}
+                      </span>
+                    </p>
+                    <p className="text-xs text-ink-muted">페이지 수: {book.pageCount}p | 판형: {book.bookSpecUid}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {book.status === 'DRAFT' && (
+                      <button type="button" onClick={() => navigate(`/books/${book.id}/editor`)} className="h-10 px-5 text-sm font-semibold bg-white border border-warm-border text-ink rounded-full hover:bg-warm-bg transition-colors">
+                        이어서 편집하기
+                      </button>
+                    )}
+                    {(book.status === 'READY' || book.status === 'ORDERED') && (
+                      <>
+                        <button type="button" onClick={() => navigate(`/books/${book.id}/preview`)} className="h-10 px-5 text-sm font-medium bg-white border border-warm-border text-ink rounded-full hover:bg-warm-bg">
+                          미리보기
+                        </button>
+                        <button type="button" onClick={() => navigate(`/books/${book.id}/order`)} className="h-10 px-5 text-sm font-bold bg-brand text-white rounded-full hover:bg-brand-hover shadow-sm">
+                          주문하러 가기
+                        </button>
+                      </>
+                    )}
+                    {book.status === 'PROCESSING' && (
+                      <div className="flex items-center gap-2 h-10 px-4 bg-warm-bg rounded-full border border-warm-border">
+                        <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
+                        <span className="text-xs text-brand font-medium">변환 진행중</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-6">
-            {activeOrders.length > 0 && (
-              <div>
-                <h2 className="text-[13px] font-semibold text-ink-sub mb-3">진행 중</h2>
-                <div className="space-y-3">
-                  {activeOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} />
-                  ))}
+          /* 일반 주문 내역 탭 */
+          orderList.length === 0 ? (
+            <div className="bg-white rounded-xl border border-warm-border p-10 text-center">
+              <svg className="w-12 h-12 mx-auto mb-3 text-ink-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <p className="text-sm text-ink-sub">아직 주문 내역이 없습니다</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {activeOrders.length > 0 && (
+                <div>
+                  <h2 className="text-[13px] font-semibold text-ink-sub mb-3">진행 중</h2>
+                  <div className="space-y-3">
+                    {activeOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {completedOrders.length > 0 && (
-              <div>
-                <h2 className="text-[13px] font-semibold text-ink-sub mb-3">완료</h2>
-                <div className="space-y-3">
-                  {completedOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} />
-                  ))}
+              {completedOrders.length > 0 && (
+                <div>
+                  <h2 className="text-[13px] font-semibold text-ink-sub mb-3">완료</h2>
+                  <div className="space-y-3">
+                    {completedOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )
         )}
       </div>
     </div>

@@ -42,6 +42,12 @@ export class BookResponseDto {
   @ApiPropertyOptional()
   coverPhotoId: number | null;
 
+  @ApiPropertyOptional()
+  coverTemplateUid: string | null;
+
+  @ApiPropertyOptional()
+  coverParams: Record<string, string> | null;
+
   @ApiProperty()
   pageCount: number;
 
@@ -75,6 +81,8 @@ export class BookResponseDto {
     dto.sweetbookBookUid = book.sweetbookBookUid;
     dto.externalRef = book.externalRef;
     dto.coverPhotoId = book.coverPhotoId;
+    dto.coverTemplateUid = book.coverTemplateUid;
+    dto.coverParams = book.coverParams;
     dto.pageCount = book.pageCount;
     dto.shareCode = book.shareCode;
     dto.isShared = book.isShared;

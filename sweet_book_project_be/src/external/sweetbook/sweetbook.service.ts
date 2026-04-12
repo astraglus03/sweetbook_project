@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import FormData = require('form-data');
 import { ExternalApiException } from '../../common/exceptions';
+
+const MAX_RETRIES = 3;
+const BASE_BACKOFF_MS = 1000;
 
 @Injectable()
 export class SweetbookApiService {
@@ -16,18 +19,42 @@ export class SweetbookApiService {
 
     this.client = axios.create({
       baseURL,
-      timeout: 10000,
+      timeout: 30000,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
 
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError) => this.retryInterceptor(error),
+    );
+
     const parts = apiKey.split('.');
     this.maskedKey =
       parts.length === 2
         ? `${parts[0].substring(0, 2)}****.****`
         : 'SB****.****';
+  }
+
+  private async retryInterceptor(error: AxiosError): Promise<unknown> {
+    const config = error.config as
+      | (AxiosError['config'] & { _retryCount?: number })
+      | undefined;
+    if (!config) return Promise.reject(error);
+    const attempt = config._retryCount ?? 0;
+    if (attempt >= MAX_RETRIES || !this.isRetryable(error)) {
+      return Promise.reject(error);
+    }
+    config._retryCount = attempt + 1;
+    const delay = this.getRetryDelayMs(error, attempt);
+    const { message } = this.extractError(error);
+    this.logger.warn(
+      `${config.method?.toUpperCase() ?? 'REQ'} ${config.url} failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}): ${message} — retrying in ${delay}ms`,
+    );
+    await this.sleep(delay);
+    return this.client.request(config);
   }
 
   private extractError(error: unknown): { message: string; details: unknown } {
@@ -37,6 +64,31 @@ export class SweetbookApiService {
       return { message, details: data };
     }
     return { message: String(error), details: null };
+  }
+
+  private isRetryable(error: unknown): boolean {
+    if (!axios.isAxiosError(error)) return false;
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return true;
+    const status = error.response?.status;
+    if (status === undefined) return true; // network error
+    if (status === 429) return true;
+    if (status >= 500 && status <= 599) return true;
+    return false;
+  }
+
+  private getRetryDelayMs(error: unknown, attempt: number): number {
+    if (axios.isAxiosError(error)) {
+      const retryAfter = error.response?.headers?.['retry-after'];
+      if (retryAfter) {
+        const seconds = Number(retryAfter);
+        if (!Number.isNaN(seconds)) return seconds * 1000;
+      }
+    }
+    return BASE_BACKOFF_MS * Math.pow(2, attempt);
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // ─── Book Specs ────────────────────────────────────────────
@@ -208,7 +260,7 @@ export class SweetbookApiService {
     bookUid: string,
     params: {
       templateUid: string;
-      parameters?: Record<string, string>;
+      parameters?: Record<string, string | string[]>;
       breakBefore?: string;
     },
   ): Promise<void> {

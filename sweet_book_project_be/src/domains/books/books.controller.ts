@@ -19,6 +19,7 @@ import { User } from '../users/entities/user.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { AddPagesDto } from './dto/add-pages.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+import { UpdateCoverDto } from './dto/update-cover.dto';
 
 @ApiTags('books')
 @ApiBearerAuth()
@@ -67,6 +68,12 @@ export class BooksController {
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
     return this.booksService.getGroupBooks(groupId);
+  }
+
+  @Get('my')
+  @ApiOperation({ summary: '내 전체 포토북 목록 조회' })
+  getMyBooks(@CurrentUser() user: User) {
+    return this.booksService.getMyBooks(user.id);
   }
 
   @Get(':bookId')
@@ -143,6 +150,25 @@ export class BooksController {
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
     return this.booksService.getBookSpecInfo(bookId);
+  }
+
+  @Get(':bookId/cover')
+  @ApiOperation({ summary: '포토북 표지 정보 조회' })
+  getCover(
+    @CurrentUser() _user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.getCover(bookId);
+  }
+
+  @Post(':bookId/cover')
+  @ApiOperation({ summary: '포토북 표지 정보 저장' })
+  updateCover(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Body() dto: UpdateCoverDto,
+  ) {
+    return this.booksService.updateCover(bookId, user.id, dto);
   }
 
   @Post(':bookId/finalize')

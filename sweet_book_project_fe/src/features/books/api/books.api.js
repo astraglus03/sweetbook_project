@@ -6,6 +6,7 @@ export const booksApi = {
   getThemes: (bookSpecUid) => api.get(`/books/specs/${bookSpecUid}/themes`),
   createBook: (groupId, payload) => api.post(`/books/groups/${groupId}`, payload),
   getGroupBooks: (groupId) => api.get(`/books/groups/${groupId}`),
+  getMyBooks: () => api.get('/books/my'),
   getBook: (bookId) => api.get(`/books/${bookId}`),
   getPages: (bookId) => api.get(`/books/${bookId}/pages`),
   addPages: (bookId, pages) => api.post(`/books/${bookId}/pages`, { pages }),
@@ -17,4 +18,8 @@ export const booksApi = {
   getAvailableTemplates: (bookId) => api.get(`/books/${bookId}/available-templates`),
   getSpecInfo: (bookId) => api.get(`/books/${bookId}/spec-info`),
   toggleShare: (bookId) => api.post(`/books/${bookId}/toggle-share`),
+  getCover: (bookId) => api.get(`/books/${bookId}/cover`),
+  setCover: (bookId, payload) => api.post(`/books/${bookId}/cover`, payload, {
+    timeout: 30000,
+  }),
 };

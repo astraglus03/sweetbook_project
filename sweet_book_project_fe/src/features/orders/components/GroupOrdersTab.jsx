@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGroupBooks } from '../../books/hooks/useBooks';
+import { useMe } from '../../auth/hooks/useAuth';
 import {
   useOrderGroupByBook,
   useCreateOrderGroup,
@@ -7,6 +8,8 @@ import {
   useConfirmAndPlace,
   useCredits,
   useEstimate,
+  useGroupMembersStatus,
+  useRemindMembers
 } from '../hooks/useOrders';
 
 const STATUS_LABELS = {
@@ -31,16 +34,17 @@ const STATUS_COLORS = {
   ERROR: 'bg-red-50 text-red-600',
 };
 
-function ShippingForm({ orderGroupId, onSuccess }) {
+function ShippingForm({ orderGroupId, initialData, onSuccess }) {
   const submit = useSubmitShipping(orderGroupId);
+  const isEditMode = !!initialData;
   const [form, setForm] = useState({
-    recipientName: '',
-    recipientPhone: '',
-    recipientAddress: '',
-    recipientZipCode: '',
-    recipientAddressDetail: '',
-    memo: '',
-    quantity: 1,
+    recipientName: initialData?.recipientName || '',
+    recipientPhone: initialData?.recipientPhone || '',
+    recipientAddress: initialData?.recipientAddress || '',
+    recipientZipCode: initialData?.recipientZipCode || '',
+    recipientAddressDetail: initialData?.recipientAddressDetail || '',
+    memo: initialData?.memo || '',
+    quantity: initialData?.quantity || 1,
   });
 
   const handleChange = (e) => {
@@ -96,7 +100,7 @@ function ShippingForm({ orderGroupId, onSuccess }) {
       </div>
       <button type="submit" disabled={submit.isPending}
         className="w-full h-11 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50">
-        {submit.isPending ? '저장 중...' : '배송 정보 저장'}
+        {submit.isPending ? '저장 중...' : (isEditMode ? '배송 정보 수정' : '배송 정보 저장')}
       </button>
       {submit.isError && (
         <p className="text-xs text-red-500 text-center">저장에 실패했습니다</p>
@@ -113,8 +117,11 @@ function BookOrderSection({ book, navigate }) {
   } = useOrderGroupByBook(book.id);
   const createOg = useCreateOrderGroup(book.id, book.groupId);
   const confirmAndPlace = useConfirmAndPlace(orderGroup?.id);
+  const remindMembers = useRemindMembers(orderGroup?.id);
+  const { data: membersStatus } = useGroupMembersStatus(orderGroup?.id);
   const { data: estimate } = useEstimate(book.id);
   const { data: credits } = useCredits();
+  const { data: me } = useMe();
 
   const [showForm, setShowForm] = useState(false);
 
@@ -123,8 +130,18 @@ function BookOrderSection({ book, navigate }) {
   const isOrdered = hasOrderGroup && orderGroup.status === 'ORDERED';
   const isCollecting = hasOrderGroup && orderGroup.status === 'COLLECTING';
 
-  const totalQuantity = orders.reduce((sum, o) => sum + (o.quantity || 1), 0);
+  const myOrder = orders.find((o) => o.userId === me?.id);
+  const hasSubmitted = !!myOrder;
+  const isRejected = myOrder?.status === 'REJECTED';
+  const totalQuantity = orders
+    .filter((o) => o.status !== 'REJECTED')
+    .reduce((sum, o) => sum + (o.quantity ?? 0), 0);
   const unitPrice = estimate?.totalAmount ?? orderGroup?.estimatedPrice ?? 0;
+
+  const isCreator = membersStatus?.isCreator ?? false;
+  const allResponded = membersStatus
+    ? (membersStatus.submittedCount + membersStatus.rejectedCount >= membersStatus.totalMembers)
+    : false;
 
   const handleCreateOrderGroup = () => {
     createOg.mutate(undefined, { onSuccess: () => setShowForm(true) });
@@ -181,19 +198,63 @@ function BookOrderSection({ book, navigate }) {
         {/* Collecting: member progress + shipping form */}
         {isCollecting && (
           <>
-            {/* Progress */}
-            <div className="flex items-center justify-between">
+            {/* Progress & Reminder */}
+            <div className="flex items-center justify-between mb-2">
               <span className="text-[13px] font-semibold text-ink">
                 배송 정보 수집중
               </span>
-              <span className="text-xs text-brand font-medium">
-                {orders.length}명 입력 완료
-              </span>
+              {membersStatus ? (
+                <span className="text-xs font-medium text-brand">
+                  응답 {membersStatus.submittedCount + membersStatus.rejectedCount}/{membersStatus.totalMembers}명
+                </span>
+              ) : (
+                <span className="text-xs text-brand font-medium">
+                  {orders.length}명 입력 완료
+                </span>
+              )}
             </div>
 
+            {membersStatus && isCreator && (
+              <div className="mb-4 p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center justify-between">
+                <div className="text-xs">
+                  <p className="font-semibold text-blue-800">미응답 팀원 독촉 메일링</p>
+                </div>
+                <button
+                  onClick={() => remindMembers.mutate()}
+                  disabled={remindMembers.isPending || allResponded}
+                  className="h-7 px-3 text-[11px] font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors shadow-sm whitespace-nowrap disabled:opacity-50"
+                >
+                  {remindMembers.isPending ? '전송중..' : (remindMembers.isSuccess ? '완료' : '이메일 발송')}
+                </button>
+              </div>
+            )}
+
             {/* Member list */}
-            {orders.length > 0 && (
-              <div className="space-y-2">
+            {membersStatus && membersStatus.members ? (
+              <div className="space-y-2 mb-4">
+                {membersStatus.members.map((m) => {
+                  const mOrder = orders.find(o => o.userId === m.userId);
+                  return (
+                    <div key={m.userId} className="flex items-center justify-between bg-warm-bg rounded-lg px-3 py-2.5">
+                      <div>
+                        {mOrder ? (
+                          <>
+                            <p className="text-sm font-medium text-ink">{mOrder.recipientName} ({mOrder.quantity}권)</p>
+                            <p className="text-[11px] text-ink-muted">{mOrder.recipientAddress?.substring(0, 25)}...</p>
+                          </>
+                        ) : (
+                          <p className="text-sm font-medium text-ink">{m.name}</p>
+                        )}
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${m.status === 'SUBMITTED' ? 'bg-green-50 text-green-700' : m.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                        {m.status === 'SUBMITTED' ? '입력 완료' : m.status === 'REJECTED' ? '참여 안함' : '대기중'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : orders.length > 0 && (
+              <div className="space-y-2 mb-4">
                 {orders.map((order) => (
                   <div key={order.id} className="flex items-center justify-between bg-warm-bg rounded-lg px-3 py-2.5">
                     <div>
@@ -211,15 +272,18 @@ function BookOrderSection({ book, navigate }) {
             {/* Add shipping form */}
             {!showForm ? (
               <button type="button" onClick={() => setShowForm(true)}
-                className="w-full h-11 rounded-full border-2 border-dashed border-warm-border text-sm text-ink-sub hover:border-brand hover:text-brand transition-colors">
-                + 내 배송 정보 입력하기
+                className={`w-full h-11 rounded-full border-2 ${isRejected ? 'border-dashed border-red-300 text-red-500 hover:border-red-500 hover:text-red-700' : 'border-dashed border-warm-border text-ink-sub hover:border-brand hover:text-brand'} text-sm transition-colors mb-4`}>
+                {hasSubmitted ? (isRejected ? '+ 배송지 다시 입력 (거절 취소하기)' : '+ 배송 정보 수정하기') : '+ 내 배송 정보 입력하기'}
               </button>
             ) : (
-              <ShippingForm orderGroupId={orderGroup.id} onSuccess={() => setShowForm(false)} />
+              <div className="mb-4">
+                <button onClick={() => setShowForm(false)} className="text-[11px] text-ink-muted mb-2 hover:text-ink">← 양식 닫기</button>
+                <ShippingForm orderGroupId={orderGroup.id} initialData={myOrder} onSuccess={() => setShowForm(false)} />
+              </div>
             )}
 
             {/* Confirm button */}
-            {orders.length > 0 && (
+            {orders.length > 0 && isCreator && (
               <div className="pt-2 border-t border-warm-border">
                 <div className="flex justify-between text-sm mb-3">
                   <span className="text-ink-sub">총 주문</span>
@@ -233,9 +297,9 @@ function BookOrderSection({ book, navigate }) {
                     <span>{credits.balance?.toLocaleString()}원</span>
                   </div>
                 )}
-                <button type="button" onClick={handleConfirm} disabled={confirmAndPlace.isPending}
+                <button type="button" onClick={handleConfirm} disabled={confirmAndPlace.isPending || !allResponded}
                   className="w-full h-11 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50">
-                  {confirmAndPlace.isPending ? '주문 처리 중...' : '전체 주문 확정'}
+                  {confirmAndPlace.isPending ? '주문 처리 중...' : '전체 주문 확정 및 결제하기'}
                 </button>
                 {confirmAndPlace.isError && (
                   <p className="text-xs text-red-500 text-center mt-2">주문에 실패했습니다</p>
@@ -302,13 +366,34 @@ export function GroupOrdersTab({ groupId, navigate }) {
       ))}
       {otherBooks.length > 0 && (
         <div className="pt-2">
-          <p className="text-xs text-ink-muted mb-2">준비 중인 포토북</p>
-          {otherBooks.map((book) => (
-            <div key={book.id} className="bg-warm-bg rounded-lg px-4 py-3 mb-2">
-              <p className="text-sm text-ink">{book.title}</p>
-              <p className="text-[11px] text-ink-muted">상태: {book.status}</p>
-            </div>
-          ))}
+          <p className="text-[13px] font-semibold text-ink-sub mb-3">준비 중인 포토북</p>
+          <div className="space-y-3">
+            {otherBooks.map((book) => (
+              <div key={book.id} className="bg-white border border-warm-border rounded-xl px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[15px] font-bold text-ink mb-1">{book.title}</p>
+                  <p className="text-xs text-ink-muted">
+                    상태: {book.status === 'DRAFT' ? '편집 중' : book.status === 'PROCESSING' ? 'PDF 변환 중' : book.status}
+                  </p>
+                </div>
+                {book.status === 'DRAFT' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/books/${book.id}/editor`)}
+                    className="h-9 px-4 text-xs font-semibold bg-brand text-white rounded-full hover:bg-brand-hover transition-colors"
+                  >
+                    이어서 편집하기
+                  </button>
+                )}
+                {book.status === 'PROCESSING' && (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-brand border-t-transparent rounded-full" />
+                    <span className="text-xs text-brand font-medium">변환 진행중</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

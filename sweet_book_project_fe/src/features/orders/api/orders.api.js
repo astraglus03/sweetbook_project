@@ -10,11 +10,17 @@ export const ordersApi = {
   getOrderGroupByBook: (bookId) =>
     api.get(`/orders/books/${bookId}/group`),
   submitShipping: (orderGroupId, payload) =>
-    api.post(`/orders/groups/${orderGroupId}/shipping`, payload),
+    api.put(`/orders/groups/${orderGroupId}/shipping`, payload),
+  remindMembers: (orderGroupId) =>
+    api.post(`/orders/groups/${orderGroupId}/remind`),
   confirmAndPlace: (orderGroupId) =>
     api.post(`/orders/groups/${orderGroupId}/confirm`),
   getMyOrders: () => api.get('/orders/my'),
   getOrderStatus: (orderId) => api.get(`/orders/${orderId}`),
   cancelOrder: (orderId, cancelReason) =>
     api.post(`/orders/${orderId}/cancel`, { cancelReason }),
+  rejectOrder: (orderGroupId, rejectReason) =>
+    api.post(`/orders/groups/${orderGroupId}/reject`, { rejectReason }),
+  getGroupMembersStatus: (orderGroupId) =>
+    api.get(`/orders/groups/${orderGroupId}/members-status`),
 };

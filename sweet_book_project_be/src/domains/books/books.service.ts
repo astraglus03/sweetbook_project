@@ -12,9 +12,11 @@ import {
 } from '../../common/exceptions';
 import { Book } from './entities/book.entity';
 import { BookPage } from './entities/book-page.entity';
+import { Photo } from '../photos/entities/photo.entity';
 import { CreateBookDto } from './dto/create-book.dto';
 import { AddPagesDto } from './dto/add-pages.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+import { UpdateCoverDto } from './dto/update-cover.dto';
 import { BookResponseDto } from './dto/book-response.dto';
 
 interface BookSpec {
@@ -44,6 +46,8 @@ export class BooksService {
     private readonly bookRepository: Repository<Book>,
     @InjectRepository(BookPage)
     private readonly bookPageRepository: Repository<BookPage>,
+    @InjectRepository(Photo)
+    private readonly photoRepository: Repository<Photo>,
     private readonly sweetbookApiService: SweetbookApiService,
     private readonly configService: ConfigService,
   ) {}
@@ -117,6 +121,14 @@ export class BooksService {
   async getGroupBooks(groupId: number): Promise<BookResponseDto[]> {
     const books = await this.bookRepository.find({
       where: { groupId },
+      order: { createdAt: 'DESC' },
+    });
+    return books.map(BookResponseDto.from);
+  }
+
+  async getMyBooks(userId: number): Promise<BookResponseDto[]> {
+    const books = await this.bookRepository.find({
+      where: { createdById: userId },
       order: { createdAt: 'DESC' },
     });
     return books.map(BookResponseDto.from);
@@ -253,8 +265,31 @@ export class BooksService {
     const coverDefs = await fetchDefs(uid(coverTpl));
     const contentDefs = await fetchDefs(uid(contentTpl));
 
+    const isFileBinding = (binding: string) => {
+      const b = binding.toLowerCase();
+      return (
+        b.includes('file') ||
+        b.includes('photo') ||
+        b.includes('image') ||
+        b.includes('collage') ||
+        b.includes('gallery')
+      );
+    };
     const fileKeys = (defs: Record<string, ParamDef>) =>
-      Object.entries(defs).filter(([, v]) => v.binding === 'file').map(([k]) => k);
+      Object.entries(defs).filter(([, v]) => isFileBinding(v.binding)).map(([k]) => k);
+    const isMultiFileBinding = (binding: string) => {
+      const b = binding.toLowerCase();
+      return (
+        b === 'files' ||
+        b === 'filelist' ||
+        b === 'images' ||
+        b === 'photos' ||
+        b.includes('collage') ||
+        b.includes('gallery') ||
+        b.endsWith('list') ||
+        b.endsWith('s')
+      );
+    };
     const coverFileKey = fileKeys(coverDefs)[0] ?? 'coverPhoto';
     const contentFileKey = fileKeys(contentDefs)[0] ?? 'photo';
 
@@ -298,28 +333,68 @@ export class BooksService {
     book.status = 'PROCESSING';
     await this.bookRepository.save(book);
 
-    // 3-1. 표지
+    // 3-1. 표지 (사용자가 저장한 표지 params 우선 사용)
+    const userCoverTplUid = book.coverTemplateUid || uid(coverTpl);
+    const coverParams: Record<string, string> = book.coverParams
+      ? { ...book.coverParams }
+      : {};
+    const coverFileKeys = fileKeys(coverDefs);
+    // file 바인딩: 사용자가 지정한 photo ID를 Sweetbook에 업로드하고 fileName으로 치환
+    for (const fk of coverFileKeys) {
+      const raw = coverParams[fk];
+      const photoId = raw && /^\d+$/.test(raw) ? Number(raw) : null;
+      if (photoId === null) continue;
+
+      const cached = uploadedFileNames.get(photoId);
+      if (cached) {
+        coverParams[fk] = cached;
+        continue;
+      }
+
+      const photo = await this.photoRepository.findOne({ where: { id: photoId } });
+      if (!photo) {
+        this.logger.warn(`Cover photo id=${photoId} not found — skipping`);
+        delete coverParams[fk];
+        continue;
+      }
+      const filePath = path.join(
+        UPLOAD_BASE,
+        String(photo.groupId),
+        'original',
+        photo.filename,
+      );
+      const buffer = await fs.readFile(filePath);
+      const uploaded = await this.sweetbookApiService.uploadPhotoToBook(
+        book.sweetbookBookUid,
+        buffer,
+        photo.filename,
+      );
+      uploadedFileNames.set(photo.id, uploaded.fileName);
+      coverParams[fk] = uploaded.fileName;
+      this.logger.log(`Uploaded cover photo ${photo.id} → ${uploaded.fileName}`);
+    }
+
+    // 사용자가 표지 사진을 지정하지 않았으면 첫 번째 내지 사진으로 fallback
     const firstPhotoPage = pages.find((p) => p.photo);
-    const coverFileName = firstPhotoPage
+    const fallbackCoverFileName = firstPhotoPage
       ? uploadedFileNames.get(firstPhotoPage.photo!.id)
       : undefined;
-    const coverParams: Record<string, string> = {};
-    if (coverFileName) coverParams[coverFileKey] = coverFileName;
-    // 사용자 입력 또는 기본값
-    for (const [key, def] of Object.entries(coverDefs)) {
-      if (def.binding !== 'text') continue;
-      const userVal = pages[0]?.templateParams?.[key];
-      if (userVal) {
-        coverParams[key] = userVal;
-      } else if (!coverParams[key]) {
-        if (/title|spineTitle/i.test(key)) coverParams[key] = book.title;
-        else if (/subtitle/i.test(key)) coverParams[key] = book.subtitle ?? ' ';
-        else if (/dateRange/i.test(key)) coverParams[key] = new Date().getFullYear().toString();
-        else coverParams[key] = ' ';
+    if (fallbackCoverFileName) {
+      for (const fk of coverFileKeys) {
+        if (!coverParams[fk]) coverParams[fk] = fallbackCoverFileName;
       }
     }
+    // 사용자 입력이 없는 텍스트 파라미터에 기본값
+    for (const [key, def] of Object.entries(coverDefs)) {
+      if (def.binding !== 'text') continue;
+      if (coverParams[key]) continue;
+      if (/title|spineTitle/i.test(key)) coverParams[key] = book.title;
+      else if (/subtitle/i.test(key)) coverParams[key] = book.subtitle ?? ' ';
+      else if (/dateRange/i.test(key)) coverParams[key] = new Date().getFullYear().toString();
+      else coverParams[key] = ' ';
+    }
     await this.sweetbookApiService.addCover(book.sweetbookBookUid, {
-      templateUid: uid(coverTpl),
+      templateUid: userCoverTplUid,
       parameters: coverParams,
     });
 
@@ -337,23 +412,44 @@ export class BooksService {
         defsCache.set(pageTemplateUid, await fetchDefs(pageTemplateUid));
       }
       const pageDefs = defsCache.get(pageTemplateUid)!;
-      const pageFileKey = fileKeys(pageDefs)[0] ?? contentFileKey;
+      const pageFileKeys = fileKeys(pageDefs);
+
+      this.logger.log(
+        `Page ${page.id} template=${pageTemplateUid} defs=${JSON.stringify(
+          Object.fromEntries(
+            Object.entries(pageDefs).map(([k, v]) => [k, v.binding]),
+          ),
+        )} fileKeys=[${pageFileKeys.join(',')}]`,
+      );
 
       const fileName = page.photo
         ? uploadedFileNames.get(page.photo.id)
         : undefined;
-      const params: Record<string, string> = {};
+      const params: Record<string, string | string[]> = {};
 
-      // 사용자가 입력한 templateParams를 우선 사용
+      // 사용자가 입력한 templateParams 중 텍스트만 사용 (file 바인딩은 Sweetbook 파일명으로 강제)
       if (page.templateParams) {
+        const fileKeySet = new Set(pageFileKeys);
         for (const [key, val] of Object.entries(page.templateParams)) {
-          if (val && val.trim()) params[key] = val;
+          if (val && val.trim() && !fileKeySet.has(key)) params[key] = val;
         }
       }
 
-      // 사진 파라미터 (templateParams에 없으면 photo로 채움)
-      if (fileName && !params[pageFileKey]) {
-        params[pageFileKey] = fileName;
+      // file 바인딩 파라미터: 단일은 문자열, 다중은 배열로 설정
+      // 페이지에 사진이 없으면 이미 업로드된 아무 사진(fallback)으로 채움
+      const fallbackFileName = [...uploadedFileNames.values()][0];
+      const effectiveFileName = fileName ?? fallbackFileName;
+      if (effectiveFileName) {
+        for (const fk of pageFileKeys) {
+          const def = pageDefs[fk];
+          params[fk] = isMultiFileBinding(def.binding)
+            ? [effectiveFileName]
+            : effectiveFileName;
+        }
+      } else {
+        this.logger.warn(
+          `Page ${page.id}: no photo available for file keys [${pageFileKeys.join(',')}] — request will likely fail`,
+        );
       }
 
       // 필수 텍스트 파라미터에 기본값
@@ -423,30 +519,73 @@ export class BooksService {
   }
 
   async getBookPages(bookId: number) {
-    await this.findBookOrFail(bookId);
+    const book = await this.findBookOrFail(bookId);
     const pages = await this.bookPageRepository.find({
       where: { bookId },
       relations: ['photo'],
       order: { pageNumber: 'ASC' },
     });
     const baseUrl = this.configService.getOrThrow<string>('BASE_URL');
-    return pages.map((page) => ({
-      id: page.id,
-      bookId: page.bookId,
-      pageNumber: page.pageNumber,
-      photoId: page.photoId,
-      chapterTitle: page.chapterTitle,
-      caption: page.caption,
-      createdAt: page.createdAt,
-      thumbnailUrl: page.photo
-        ? `${baseUrl}/uploads/photos/${page.photo.groupId}/thumbnail/${page.photo.filename}`
-        : null,
-      mediumUrl: page.photo
-        ? `${baseUrl}/uploads/photos/${page.photo.groupId}/medium/${page.photo.filename}`
-        : null,
-      contentTemplateUid: page.contentTemplateUid,
-      templateParams: page.templateParams,
-    }));
+
+    const photoUrls = (photo: { groupId: number; filename: string }) => ({
+      thumbnailUrl: `${baseUrl}/uploads/photos/${photo.groupId}/thumbnail/${photo.filename}`,
+      mediumUrl: `${baseUrl}/uploads/photos/${photo.groupId}/medium/${photo.filename}`,
+    });
+
+    // 표지 합성 페이지 생성 (coverPhotoId 또는 coverParams의 숫자형 photo id 활용)
+    let coverPhotoId: number | null = book.coverPhotoId ?? null;
+    if (!coverPhotoId && book.coverParams) {
+      for (const val of Object.values(book.coverParams)) {
+        if (typeof val === 'string' && /^\d+$/.test(val)) {
+          coverPhotoId = Number(val);
+          break;
+        }
+      }
+    }
+    const coverPseudo = coverPhotoId
+      ? await this.photoRepository.findOne({ where: { id: coverPhotoId } })
+      : null;
+
+    const contentPages = pages.map((page) => {
+      const urls = page.photo ? photoUrls(page.photo) : { thumbnailUrl: null, mediumUrl: null };
+      return {
+        id: page.id,
+        bookId: page.bookId,
+        pageNumber: page.pageNumber,
+        photoId: page.photoId,
+        chapterTitle: page.chapterTitle,
+        caption: page.caption,
+        createdAt: page.createdAt,
+        thumbnailUrl: urls.thumbnailUrl,
+        mediumUrl: urls.mediumUrl,
+        contentTemplateUid: page.contentTemplateUid,
+        templateParams: page.templateParams,
+        isCover: false,
+      };
+    });
+
+    if (coverPseudo) {
+      const urls = photoUrls(coverPseudo);
+      return [
+        {
+          id: -1,
+          bookId,
+          pageNumber: 0,
+          photoId: coverPseudo.id,
+          chapterTitle: null,
+          caption: book.title,
+          createdAt: book.createdAt,
+          thumbnailUrl: urls.thumbnailUrl,
+          mediumUrl: urls.mediumUrl,
+          contentTemplateUid: book.coverTemplateUid,
+          templateParams: book.coverParams,
+          isCover: true,
+        },
+        ...contentPages,
+      ];
+    }
+
+    return contentPages;
   }
 
   async updatePage(
@@ -470,6 +609,7 @@ export class BooksService {
     if (dto.chapterTitle !== undefined) page.chapterTitle = dto.chapterTitle;
     if (dto.caption !== undefined) page.caption = dto.caption;
     if (dto.templateParams !== undefined) page.templateParams = dto.templateParams;
+    if (dto.pageNumber !== undefined) page.pageNumber = dto.pageNumber;
 
     await this.bookPageRepository.save(page);
   }
@@ -492,6 +632,22 @@ export class BooksService {
     await this.bookPageRepository.remove(page);
 
     book.pageCount = Math.max(0, book.pageCount - 1);
+    await this.bookRepository.save(book);
+  }
+
+  async getCover(bookId: number) {
+    const book = await this.findBookOrFail(bookId);
+    return {
+      coverTemplateUid: book.coverTemplateUid ?? null,
+      coverParams: book.coverParams ?? {},
+    };
+  }
+
+  async updateCover(bookId: number, userId: number, dto: UpdateCoverDto) {
+    const book = await this.findBookOrFail(bookId);
+    this.verifyCreator(book, userId);
+    book.coverTemplateUid = dto.templateUid;
+    book.coverParams = dto.parameters ?? {};
     await this.bookRepository.save(book);
   }
 

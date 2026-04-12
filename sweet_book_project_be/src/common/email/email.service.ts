@@ -65,6 +65,78 @@ export class EmailService {
     }
   }
 
+  async sendShippingReminder(
+    to: string,
+    name: string,
+    bookTitle: string,
+    orderLink: string,
+  ): Promise<void> {
+    const subject = `[GroupBook] "${bookTitle}" 배송 정보를 입력해주세요`;
+    const html = this.buildShippingReminderHtml(name, bookTitle, orderLink);
+
+    if (!this.transporter) {
+      this.logger.log(`[DEV EMAIL] To: ${to}`);
+      this.logger.log(`[DEV EMAIL] Subject: ${subject}`);
+      this.logger.log(`[DEV EMAIL] Order link: ${orderLink}`);
+      return;
+    }
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.fromAddress,
+        to,
+        subject,
+        html,
+      });
+      this.logger.log(
+        `Shipping reminder sent to ${to} (messageId=${info.messageId})`,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        `Failed to send reminder email to ${to}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
+  private buildShippingReminderHtml(
+    name: string,
+    bookTitle: string,
+    orderLink: string,
+  ): string {
+    return `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F8F5F0;font-family:'Inter',sans-serif;">
+  <div style="max-width:480px;margin:40px auto;background:#FFFFFF;border-radius:16px;border:1px solid #E5E0D8;overflow:hidden;">
+    <div style="background:#1A1A1A;padding:32px 40px;text-align:center;">
+      <span style="color:#D4916E;font-size:20px;font-weight:700;">GroupBook</span>
+    </div>
+    <div style="padding:40px;">
+      <h2 style="margin:0 0 8px;font-size:20px;color:#1A1A1A;">배송 정보 입력이 필요합니다</h2>
+      <p style="margin:0 0 24px;font-size:14px;color:#6B6B6B;line-height:1.6;">
+        안녕하세요, ${name}님.<br>
+        <b>${bookTitle}</b> 포토북 주문이 진행 중입니다.<br>
+        아래 버튼을 눌러 배송 정보를 입력해주세요.
+      </p>
+      <a href="${orderLink}"
+         style="display:block;width:100%;padding:14px 0;background:#D4916E;color:#FFFFFF;text-align:center;border-radius:9999px;font-size:15px;font-weight:600;text-decoration:none;">
+        배송 정보 입력하기
+      </a>
+      <p style="margin:24px 0 0;font-size:12px;color:#9B9B9B;line-height:1.5;">
+        모든 멤버의 배송 정보가 모이면 주문이 확정됩니다.
+      </p>
+    </div>
+    <div style="padding:20px 40px;background:#F8F5F0;border-top:1px solid #E5E0D8;">
+      <p style="margin:0;font-size:11px;color:#9B9B9B;text-align:center;">
+        &copy; GroupBook. 모임 기록 포토북 서비스.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`.trim();
+  }
+
   private buildResetHtml(name: string, resetLink: string): string {
     return `
 <!DOCTYPE html>

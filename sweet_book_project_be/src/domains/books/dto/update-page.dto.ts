@@ -25,4 +25,9 @@ export class UpdatePageDto {
   @ApiPropertyOptional({ description: '템플릿 파라미터 (key-value)' })
   @IsOptional()
   templateParams?: Record<string, string>;
+
+  @ApiPropertyOptional({ description: '페이지 순서 번호' })
+  @IsOptional()
+  @IsInt()
+  pageNumber?: number;
 }

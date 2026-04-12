@@ -48,6 +48,17 @@ export function useGroupBooks(groupId) {
   });
 }
 
+export function useMyBooks() {
+  return useQuery({
+    queryKey: ['books', 'my'],
+    queryFn: async () => {
+      const res = await booksApi.getMyBooks();
+      return res.data;
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useBook(bookId) {
   return useQuery({
     queryKey: ['books', bookId],
@@ -177,6 +188,28 @@ export function useToggleShare(bookId) {
   return useMutation({
     mutationFn: () => booksApi.toggleShare(bookId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books', bookId] });
+    },
+  });
+}
+
+export function useGetCover(bookId) {
+  return useQuery({
+    queryKey: ['books', bookId, 'cover'],
+    queryFn: async () => {
+      const res = await booksApi.getCover(bookId);
+      return res.data;
+    },
+    enabled: !!bookId,
+  });
+}
+
+export function useSetCover(bookId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (formData) => booksApi.setCover(bookId, formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books', bookId, 'cover'] });
       queryClient.invalidateQueries({ queryKey: ['books', bookId] });
     },
   });

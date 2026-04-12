@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { SweetbookApiService } from '../../external/sweetbook/sweetbook.service';
@@ -10,7 +11,10 @@ import {
 import { Order } from './entities/order.entity';
 import { OrderGroup } from './entities/order-group.entity';
 import { Book } from '../books/entities/book.entity';
+import { GroupMember } from '../groups/entities/group-member.entity';
 import { SubmitShippingDto } from './dto/submit-shipping.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../../common/email/email.service';
 
 @Injectable()
 export class OrdersService {
@@ -23,9 +27,65 @@ export class OrdersService {
     private readonly orderGroupRepository: Repository<OrderGroup>,
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepository: Repository<GroupMember>,
     private readonly sweetbookApiService: SweetbookApiService,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
   ) {}
+
+  async remindPendingMembers(orderGroupId: number, userId: number) {
+    const orderGroup = await this.findOrderGroupOrFail(orderGroupId);
+
+    if (orderGroup.initiatedBy !== userId) {
+      throw new ForbiddenException(
+        'ORDER_NOT_INITIATOR',
+        '독촉은 주문을 시작한 사용자만 가능합니다',
+      );
+    }
+    if (orderGroup.status !== 'COLLECTING') {
+      throw new ForbiddenException(
+        'ORDER_GROUP_NOT_COLLECTING',
+        '배송 정보 수집 중이 아닙니다',
+      );
+    }
+
+    const book = await this.findBookOrFail(orderGroup.bookId);
+
+    const members = await this.groupMemberRepository.find({
+      where: { groupId: orderGroup.groupId },
+      relations: ['user'],
+    });
+    const orders = await this.orderRepository.find({
+      where: { orderGroupId },
+    });
+    const orderedUserIds = new Set(orders.map((o) => o.ordererId));
+
+    const pendingMembers = members.filter(
+      (m) => !orderedUserIds.has(m.userId) && m.user?.email,
+    );
+
+    const feBaseUrl = this.configService.getOrThrow<string>('CORS_ORIGIN');
+    const orderLink = `${feBaseUrl}/books/${orderGroup.bookId}/order`;
+
+    await Promise.all(
+      pendingMembers.map((m) =>
+        this.emailService.sendShippingReminder(
+          m.user!.email,
+          m.user!.name,
+          book.title,
+          orderLink,
+        ),
+      ),
+    );
+
+    this.logger.log(
+      `Shipping reminders sent: orderGroup=${orderGroupId}, count=${pendingMembers.length}`,
+    );
+    return { remindedCount: pendingMembers.length };
+  }
 
   async getCredits(): Promise<{ balance: number; currency: string }> {
     return this.sweetbookApiService.getCredits();
@@ -102,6 +162,22 @@ export class OrdersService {
     }
 
     const saved = await this.orderGroupRepository.save(orderGroup);
+
+    // 그룹 멤버 전체에게 주문 참여 알림 발송
+    const members = await this.groupMemberRepository.find({
+      where: { groupId },
+    });
+    for (const member of members) {
+      if (member.userId === userId) continue; // 제작자 본인 제외
+      await this.notificationsService.createNotification({
+        userId: member.userId,
+        groupId,
+        type: 'ORDER_COLLECTING',
+        title: `포토북 주문이 시작되었습니다`,
+        message: `"${book.title}" 포토북의 주문 수집이 시작되었습니다. 배송지를 입력하거나 수령을 거절해주세요.`,
+      });
+    }
+
     return this.getOrderGroupDetail(saved.id);
   }
 
@@ -151,6 +227,10 @@ export class OrdersService {
       order.recipientAddressDetail = dto.recipientAddressDetail ?? null;
       order.memo = dto.memo ?? null;
       order.quantity = dto.quantity;
+      // 거절했던 멤버가 다시 참여 → PENDING 으로 복구
+      if (order.status === 'REJECTED') {
+        order.status = 'PENDING';
+      }
     } else {
       order = this.orderRepository.create({
         orderGroupId,
@@ -190,9 +270,11 @@ export class OrdersService {
       );
     }
 
-    const orders = await this.orderRepository.find({
+    const allOrders = await this.orderRepository.find({
       where: { orderGroupId },
     });
+    // REJECTED 주문은 Sweetbook 주문 대상에서 제외
+    const orders = allOrders.filter((o) => o.status !== 'REJECTED');
     if (orders.length === 0) {
       throw new ForbiddenException(
         'ORDER_NO_MEMBERS',
@@ -242,10 +324,10 @@ export class OrdersService {
             { bookUid: book.sweetbookBookUid!, quantity: order.quantity },
           ],
           shipping: {
-            recipientName: order.recipientName,
-            recipientPhone: order.recipientPhone,
-            postalCode: order.recipientZipCode,
-            address1: order.recipientAddress,
+            recipientName: order.recipientName!,
+            recipientPhone: order.recipientPhone!,
+            postalCode: order.recipientZipCode!,
+            address1: order.recipientAddress!,
             address2: order.recipientAddressDetail ?? undefined,
             memo: order.memo ?? undefined,
           },
@@ -366,6 +448,103 @@ export class OrdersService {
       relations: ['orderGroup', 'orderGroup.book'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async rejectOrder(
+    orderGroupId: number,
+    userId: number,
+    rejectReason?: string,
+  ) {
+    const orderGroup = await this.findOrderGroupOrFail(orderGroupId);
+
+    if (orderGroup.status !== 'COLLECTING') {
+      throw new ForbiddenException(
+        'ORDER_GROUP_NOT_COLLECTING',
+        '배송 정보 수집 중이 아닙니다',
+      );
+    }
+
+    // 이미 주문 레코드가 있는 경우 상태 변경
+    let order = await this.orderRepository.findOne({
+      where: { orderGroupId, ordererId: userId },
+    });
+
+    if (order) {
+      if (order.status !== 'PENDING' && order.status !== 'REJECTED') {
+        throw new ForbiddenException(
+          'ORDER_ALREADY_PROCESSED',
+          '이미 처리된 주문은 거절할 수 없습니다',
+        );
+      }
+      order.status = 'REJECTED';
+      order.memo = rejectReason ?? null;
+    } else {
+      const timestamp = Date.now();
+      order = this.orderRepository.create({
+        orderGroupId,
+        ordererId: userId,
+        status: 'REJECTED',
+        idempotencyKey: `reject-${orderGroup.bookId}-${userId}-${timestamp}`,
+        quantity: 0,
+        recipientName: null,
+        recipientPhone: null,
+        recipientAddress: null,
+        recipientZipCode: null,
+        memo: rejectReason ?? null,
+      });
+    }
+
+    const saved = await this.orderRepository.save(order);
+    this.logger.log(`Order rejected by user ${userId} for group ${orderGroupId}`);
+    return saved;
+  }
+
+  async getGroupMembersStatus(orderGroupId: number, userId: number) {
+    const orderGroup = await this.findOrderGroupOrFail(orderGroupId);
+    const isCreator = orderGroup.initiatedBy === userId;
+
+    // 그룹의 전체 멤버 조회
+    const members = await this.groupMemberRepository.find({
+      where: { groupId: orderGroup.groupId },
+      relations: ['user'],
+    });
+
+    // 해당 주문 그룹의 주문 목록
+    const orders = await this.orderRepository.find({
+      where: { orderGroupId },
+    });
+
+    const orderMap = new Map(orders.map((o) => [o.ordererId, o]));
+
+    const memberStatuses = members.map((member) => {
+      const order = orderMap.get(member.userId);
+      let status: 'SUBMITTED' | 'REJECTED' | 'PENDING' = 'PENDING';
+      if (order) {
+        if (order.status === 'REJECTED') {
+          status = 'REJECTED';
+        } else {
+          status = 'SUBMITTED';
+        }
+      }
+      return {
+        userId: member.userId,
+        name: member.user?.name ?? '알 수 없음',
+        status,
+      };
+    });
+
+    const submittedCount = memberStatuses.filter((m) => m.status === 'SUBMITTED').length;
+    const rejectedCount = memberStatuses.filter((m) => m.status === 'REJECTED').length;
+    const pendingCount = memberStatuses.filter((m) => m.status === 'PENDING').length;
+
+    return {
+      isCreator,
+      totalMembers: members.length,
+      submittedCount,
+      rejectedCount,
+      pendingCount,
+      members: memberStatuses,
+    };
   }
 
   // ─── Private Helpers ───────────────────────────────────────

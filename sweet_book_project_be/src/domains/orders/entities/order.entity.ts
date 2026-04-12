@@ -13,6 +13,7 @@ import { OrderGroup } from './order-group.entity';
 
 export type OrderStatus =
   | 'PENDING'
+  | 'REJECTED'
   | 'SUBMITTING'
   | 'PAID'
   | 'PDF_READY'
@@ -49,6 +50,7 @@ export class Order {
     type: 'enum',
     enum: [
       'PENDING',
+      'REJECTED',
       'SUBMITTING',
       'PAID',
       'PDF_READY',
@@ -75,17 +77,17 @@ export class Order {
   @Column({ type: 'int', default: 1 })
   quantity: number;
 
-  @Column({ type: 'varchar', length: 50 })
-  recipientName: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  recipientName: string | null;
 
-  @Column({ type: 'varchar', length: 20 })
-  recipientPhone: string;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  recipientPhone: string | null;
 
-  @Column({ type: 'varchar', length: 500 })
-  recipientAddress: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  recipientAddress: string | null;
 
-  @Column({ type: 'varchar', length: 10 })
-  recipientZipCode: string;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  recipientZipCode: string | null;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   recipientAddressDetail: string | null;
