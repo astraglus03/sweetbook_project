@@ -101,6 +101,21 @@ export class Order {
   @Column({ type: 'timestamp', nullable: true })
   orderedAt: Date | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  trackingNumber: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  carrierCode: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  expectedPrintDate: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  shippedAt: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deliveredAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
