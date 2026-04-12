@@ -30,10 +30,16 @@ export class WebhookRouterService {
 
   async handle(payload: SweetbookEventPayload): Promise<void> {
     const { event_type: eventType, data, isTest } = payload;
-    const orderUid = typeof data?.orderUid === 'string' ? data.orderUid : null;
+    // Sweetbook은 snake_case로 보냄. 혹시 camelCase가 와도 fallback 유지.
+    const orderUid =
+      typeof data?.order_uid === 'string'
+        ? data.order_uid
+        : typeof data?.orderUid === 'string'
+          ? data.orderUid
+          : null;
 
     if (!orderUid) {
-      this.logger.warn(`Event ${eventType} missing orderUid, skipping`);
+      this.logger.warn(`Event ${eventType} missing order_uid, skipping`);
       return;
     }
 
@@ -89,10 +95,20 @@ export class WebhookRouterService {
     order.status = mapped;
 
     if (mapped === 'SHIPPED') {
-      if (typeof detail?.trackingNumber === 'string')
-        order.trackingNumber = detail.trackingNumber;
-      if (typeof detail?.carrierCode === 'string')
-        order.carrierCode = detail.carrierCode;
+      const tn =
+        typeof detail?.tracking_number === 'string'
+          ? detail.tracking_number
+          : typeof detail?.trackingNumber === 'string'
+            ? detail.trackingNumber
+            : null;
+      if (tn) order.trackingNumber = tn;
+      const tc =
+        typeof detail?.tracking_carrier === 'string'
+          ? detail.tracking_carrier
+          : typeof detail?.carrierCode === 'string'
+            ? detail.carrierCode
+            : null;
+      if (tc) order.carrierCode = tc;
       if (!order.shippedAt) order.shippedAt = new Date();
     }
     if (mapped === 'DELIVERED' && !order.deliveredAt) {
@@ -127,7 +143,12 @@ export class WebhookRouterService {
     data: Record<string, unknown>,
     isTest: boolean,
   ): Promise<void> {
-    const cancelReason = typeof data?.cancelReason === 'string' ? data.cancelReason : null;
+    const cancelReason =
+      typeof data?.cancel_reason === 'string'
+        ? data.cancel_reason
+        : typeof data?.cancelReason === 'string'
+          ? data.cancelReason
+          : null;
     order.status = 'CANCELLED_REFUND';
     if (cancelReason) order.memo = `[취소] ${cancelReason}`;
     await this.orderRepository.save(order);
@@ -164,8 +185,15 @@ export class WebhookRouterService {
     isTest: boolean,
   ): Promise<void> {
     order.status = 'CONFIRMED';
-    if (typeof data?.expectedPrintDate === 'string') {
-      order.expectedPrintDate = new Date(data.expectedPrintDate);
+    // Sweetbook은 print_day, 과거 필드명 expectedPrintDate 도 fallback
+    const printDay =
+      typeof data?.print_day === 'string'
+        ? data.print_day
+        : typeof data?.expectedPrintDate === 'string'
+          ? data.expectedPrintDate
+          : null;
+    if (printDay) {
+      order.expectedPrintDate = new Date(printDay);
     }
     await this.orderRepository.save(order);
     if (!isTest) {
@@ -208,11 +236,31 @@ export class WebhookRouterService {
     isTest: boolean,
   ): Promise<void> {
     order.status = 'SHIPPED';
-    order.shippedAt = new Date();
-    if (typeof data?.trackingNumber === 'string')
-      order.trackingNumber = data.trackingNumber;
-    if (typeof data?.carrierCode === 'string')
-      order.carrierCode = data.carrierCode;
+    // shipped_at (snake) → shippedAt (camel) fallback
+    const shippedAt =
+      typeof data?.shipped_at === 'string'
+        ? data.shipped_at
+        : typeof data?.shippedAt === 'string'
+          ? data.shippedAt
+          : null;
+    order.shippedAt = shippedAt ? new Date(shippedAt) : new Date();
+
+    const trackingNumber =
+      typeof data?.tracking_number === 'string'
+        ? data.tracking_number
+        : typeof data?.trackingNumber === 'string'
+          ? data.trackingNumber
+          : null;
+    if (trackingNumber) order.trackingNumber = trackingNumber;
+
+    const carrier =
+      typeof data?.tracking_carrier === 'string'
+        ? data.tracking_carrier
+        : typeof data?.carrierCode === 'string'
+          ? data.carrierCode
+          : null;
+    if (carrier) order.carrierCode = carrier;
+
     await this.orderRepository.save(order);
 
     if (!isTest) {
@@ -234,9 +282,14 @@ export class WebhookRouterService {
     isTest: boolean,
   ): Promise<void> {
     order.status = 'DELIVERED';
-    order.deliveredAt = typeof data?.deliveredAt === 'string'
-      ? new Date(data.deliveredAt)
-      : new Date();
+    // Sweetbook이 changed_at 으로 보냄, 과거 deliveredAt 도 fallback
+    const deliveredAt =
+      typeof data?.changed_at === 'string'
+        ? data.changed_at
+        : typeof data?.deliveredAt === 'string'
+          ? data.deliveredAt
+          : null;
+    order.deliveredAt = deliveredAt ? new Date(deliveredAt) : new Date();
     await this.orderRepository.save(order);
 
     if (!isTest) {
