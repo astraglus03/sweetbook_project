@@ -7,6 +7,10 @@ import { GroupSettings } from '../features/groups/components/GroupSettings';
 import { PhotoGallery } from '../features/photos/components/PhotoGallery';
 import { PhotoUploadModal } from '../features/photos/components/PhotoUploadModal';
 import { GroupOrdersTab } from '../features/orders/components/GroupOrdersTab';
+import { GroupBooksTab } from '../features/books/components/GroupBooksTab';
+import { InviteModal } from '../features/groups/components/InviteModal';
+import { KakaoImportModal } from '../features/kakao-import/components/KakaoImportModal';
+import { KakaoMappingModal } from '../features/kakao-import/components/KakaoMappingModal';
 
 const TABS = [
   { key: 'photos', label: '사진' },
@@ -32,6 +36,9 @@ export function GroupDetailPage() {
   const [activeTab, setActiveTab] = useState('photos');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isKakaoOpen, setIsKakaoOpen] = useState(false);
+  const [kakaoResult, setKakaoResult] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
 
   const isOwner = me && group && me.id === group.ownerId;
@@ -158,50 +165,19 @@ export function GroupDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Share — copy invite link */}
-            <button
-              type="button"
-              onClick={async () => {
-                const link = `${window.location.origin}/join/${group.inviteCode}`;
-                try {
-                  await navigator.clipboard.writeText(link);
-                } catch {
-                  const ta = document.createElement('textarea');
-                  ta.value = link;
-                  document.body.appendChild(ta);
-                  ta.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(ta);
-                }
-                setShareCopied(true);
-                setTimeout(() => setShareCopied(false), 2000);
-              }}
-              className={`h-9 flex items-center justify-center rounded-full transition-colors text-white ${
-                shareCopied ? 'bg-green-500/30 px-3 gap-1.5' : 'w-9 bg-white/10 hover:bg-white/20'
-              }`}
-              title="초대 링크 복사"
-            >
-              {shareCopied ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-xs font-medium">복사됨</span>
-                </>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-              )}
+            {/* Invite (primary action) */}
+            <button type="button" onClick={() => setIsInviteOpen(true)}
+              className="h-9 px-4 rounded-full bg-brand hover:bg-brand-hover transition-colors text-white text-xs font-semibold flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span className="hidden sm:inline">초대</span>
             </button>
 
             {/* Upload */}
-            <button
-              type="button"
-              onClick={() => setIsUploadOpen(true)}
+            <button type="button" onClick={() => setIsUploadOpen(true)}
               className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
-              title="사진 업로드"
-            >
+              title="사진 업로드">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
@@ -209,12 +185,9 @@ export function GroupDetailPage() {
 
             {/* Settings gear (owner only) */}
             {isOwner && (
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen((v) => !v)}
+              <button type="button" onClick={() => setIsSettingsOpen((v) => !v)}
                 className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors text-white ${isSettingsOpen ? 'bg-white/25' : 'bg-white/10 hover:bg-white/20'}`}
-                title="설정"
-              >
+                title="모임 설정">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -224,18 +197,28 @@ export function GroupDetailPage() {
 
             {/* Leave (non-owner) */}
             {!isOwner && (
-              <button
-                type="button"
-                onClick={handleLeave}
-                disabled={leaveGroup.isPending}
-                className="text-xs text-white/40 hover:text-red-400 transition-colors px-2 py-1"
-              >
-                나가기
+              <button type="button" onClick={handleLeave} disabled={leaveGroup.isPending}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-red-500/30 transition-colors text-white/60 hover:text-red-200 disabled:opacity-50"
+                title="모임 나가기">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Invite modal */}
+      {isInviteOpen && (
+        <InviteModal
+          inviteCode={group.inviteCode}
+          groupName={group.name}
+          onClose={() => setIsInviteOpen(false)}
+          shareCopied={shareCopied}
+          setShareCopied={setShareCopied}
+        />
+      )}
 
       {/* Settings panel (owner) */}
       {isOwner && isSettingsOpen && (
@@ -267,10 +250,24 @@ export function GroupDetailPage() {
       {/* Tab content */}
       <div className="px-4 lg:px-10 py-5">
         {activeTab === 'photos' && (
-          <PhotoGallery
-            groupId={Number(groupId)}
-            onUploadClick={() => setIsUploadOpen(true)}
-          />
+          <div>
+            {/* 카톡에서 가져오기 배너 */}
+            <button type="button" onClick={() => setIsKakaoOpen(true)}
+              className="w-full mb-4 flex items-center gap-3 p-3.5 bg-gradient-to-r from-yellow-50 to-amber-50 border border-amber-200 rounded-2xl hover:from-yellow-100 hover:to-amber-100 transition-colors text-left">
+              <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0 text-lg">💬</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-ink">카카오톡에서 사진 한 번에 가져오기</p>
+                <p className="text-[11px] text-ink-sub mt-0.5">단톡방 대화 내보내기 zip을 올리면 사진이 업로더 이름과 함께 들어와요</p>
+              </div>
+              <svg className="w-5 h-5 text-ink-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <PhotoGallery
+              groupId={Number(groupId)}
+              onUploadClick={() => setIsUploadOpen(true)}
+            />
+          </div>
         )}
         {activeTab === 'members' && (
           <MemberList
@@ -282,22 +279,7 @@ export function GroupDetailPage() {
           />
         )}
         {activeTab === 'books' && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-light flex items-center justify-center">
-              <svg className="w-8 h-8 text-brand/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </div>
-            <p className="text-sm text-ink mb-1">포토북을 만들어보세요</p>
-            <p className="text-xs text-ink-muted mb-4">사진을 모아 멋진 포토북을 제작할 수 있습니다</p>
-            <button
-              type="button"
-              onClick={() => navigate(`/groups/${groupId}/books/templates`)}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-brand rounded-full hover:bg-brand-hover transition-colors"
-            >
-              포토북 만들기
-            </button>
-          </div>
+          <GroupBooksTab groupId={Number(groupId)} navigate={navigate} />
         )}
         {activeTab === 'orders' && (
           <GroupOrdersTab groupId={Number(groupId)} navigate={navigate} />
@@ -310,6 +292,23 @@ export function GroupDetailPage() {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
       />
+
+      {isKakaoOpen && !kakaoResult && (
+        <KakaoImportModal
+          groupId={Number(groupId)}
+          onClose={() => setIsKakaoOpen(false)}
+          onImportComplete={(result) => setKakaoResult(result)}
+        />
+      )}
+
+      {kakaoResult && (
+        <KakaoMappingModal
+          groupId={Number(groupId)}
+          result={kakaoResult}
+          members={group.members ?? []}
+          onClose={() => { setKakaoResult(null); setIsKakaoOpen(false); }}
+        />
+      )}
     </div>
   );
 }

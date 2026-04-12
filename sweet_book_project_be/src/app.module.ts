@@ -16,6 +16,7 @@ import { PhotosModule } from './domains/photos/photos.module';
 import { BooksModule } from './domains/books/books.module';
 import { OrdersModule } from './domains/orders/orders.module';
 import { NotificationsModule } from './domains/notifications/notifications.module';
+import { KakaoImportModule } from './domains/kakao-import/kakao-import.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
 
@@ -39,6 +40,7 @@ import { OpenAiModule } from './external/openai/openai.module';
     BooksModule,
     OrdersModule,
     NotificationsModule,
+    KakaoImportModule,
     SweetbookModule,
     OpenAiModule,
   ],

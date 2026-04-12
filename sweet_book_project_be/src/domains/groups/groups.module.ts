@@ -6,9 +6,10 @@ import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { GroupsRepository } from './groups.repository';
 import { GroupMembersRepository } from './group-members.repository';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Group, GroupMember])],
+  imports: [TypeOrmModule.forFeature([Group, GroupMember]), NotificationsModule],
   controllers: [GroupsController],
   providers: [GroupsService, GroupsRepository, GroupMembersRepository],
   exports: [GroupsService],

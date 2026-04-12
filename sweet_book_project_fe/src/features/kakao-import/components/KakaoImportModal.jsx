@@ -1,0 +1,174 @@
+import { useRef, useState } from 'react';
+import { useKakaoImport } from '../hooks/useKakaoImport';
+
+const MAX_SIZE = 100 * 1024 * 1024;
+
+export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
+  const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState('idle'); // idle | uploading | processing
+  const inputRef = useRef(null);
+  const importMutation = useKakaoImport(groupId);
+
+  const handleFile = (file) => {
+    if (!file) return;
+    setError('');
+
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (ext === 'txt') {
+      setError(
+        'iOS/PC 카톡의 txt 파일은 사진이 없어 사용할 수 없어요. 안드로이드 카톡 앱에서 "모든 대화 내보내기"로 생성된 zip을 올려주세요.',
+      );
+      return;
+    }
+    if (ext !== 'zip') {
+      setError('zip 파일만 업로드할 수 있어요');
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      setError('파일이 100MB를 초과해요. 더 짧은 기간으로 내보내주세요.');
+      return;
+    }
+
+    setStage('uploading');
+    setProgress(0);
+    importMutation.mutate(
+      {
+        file,
+        onProgress: (e) => {
+          if (e.total) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setProgress(pct);
+            if (pct >= 100) setStage('processing');
+          }
+        },
+      },
+      {
+        onSuccess: (result) => {
+          setStage('idle');
+          onImportComplete(result);
+        },
+        onError: (err) => {
+          setStage('idle');
+          const msg = err?.response?.data?.error?.message ?? err?.message ?? '업로드에 실패했어요';
+          setError(msg);
+        },
+      },
+    );
+  };
+
+  const isWorking = stage !== 'idle';
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={() => !isWorking && onClose()}>
+      <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 border-b border-warm-border flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-ink">카카오톡에서 사진 가져오기</h2>
+            <p className="text-xs text-ink-sub mt-1">단톡방 대화 내보내기 zip을 올리면 사진을 한 번에 가져와요</p>
+          </div>
+          {!isWorking && (
+            <button type="button" onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-warm-bg text-ink-sub">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* 안내 */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900">
+            <p className="font-semibold mb-1">📱 안드로이드 카톡 앱에서 내보내기</p>
+            <p className="leading-relaxed">
+              대화방 → 우측 상단 메뉴 → <b>대화 내용 내보내기</b> → <b>모든 대화 내용 내보내기 (텍스트 및 미디어)</b>
+            </p>
+            <p className="mt-1 leading-relaxed text-amber-800">
+              iOS/PC 카톡은 사진이 포함된 내보내기를 지원하지 않아요.
+            </p>
+          </div>
+
+          {/* 드롭존 */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (isWorking) return;
+              const file = e.dataTransfer.files[0];
+              if (file) handleFile(file);
+            }}
+            onClick={() => !isWorking && inputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isWorking
+                ? 'border-warm-border bg-warm-bg/40 cursor-wait'
+                : dragOver
+                  ? 'border-brand bg-brand/5'
+                  : 'border-warm-border hover:border-brand hover:bg-brand/5'
+            }`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".zip,application/zip,application/x-zip-compressed"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+                e.target.value = '';
+              }}
+            />
+
+            {stage === 'idle' && (
+              <>
+                <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-warm-bg flex items-center justify-center text-ink-muted">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-ink mb-1">
+                  zip 파일을 드래그하거나 클릭해서 선택
+                </p>
+                <p className="text-xs text-ink-muted">최대 100MB · 안드로이드 카톡 zip만 지원</p>
+              </>
+            )}
+
+            {stage === 'uploading' && (
+              <div className="space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
+                  <div className="animate-spin w-7 h-7 border-2 border-brand border-t-transparent rounded-full" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-ink mb-2">업로드 중… {progress}%</p>
+                  <div className="h-2 bg-warm-bg rounded-full overflow-hidden">
+                    <div className="h-full bg-brand transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {stage === 'processing' && (
+              <div className="space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
+                  <div className="animate-spin w-7 h-7 border-2 border-brand border-t-transparent rounded-full" />
+                </div>
+                <p className="text-sm font-semibold text-ink">사진 분석 중…</p>
+                <p className="text-xs text-ink-muted">잠시만 기다려주세요 (30초~1분)</p>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700 leading-relaxed">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

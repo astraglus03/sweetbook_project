@@ -8,8 +8,11 @@ export class PhotoResponseDto {
   @ApiProperty()
   groupId: number;
 
-  @ApiProperty()
-  uploaderId: number;
+  @ApiPropertyOptional()
+  uploaderId: number | null;
+
+  @ApiPropertyOptional()
+  kakaoName: string | null;
 
   @ApiProperty()
   filename: string;
@@ -52,6 +55,7 @@ export class PhotoResponseDto {
     dto.id = photo.id;
     dto.groupId = photo.groupId;
     dto.uploaderId = photo.uploaderId;
+    dto.kakaoName = photo.kakaoName;
     dto.filename = photo.filename;
     dto.originalFilename = photo.originalFilename;
     dto.mimetype = photo.mimetype;
@@ -62,7 +66,7 @@ export class PhotoResponseDto {
     dto.thumbnailUrl = `${baseUrl}/uploads/photos/${photo.groupId}/thumbnail/${photo.filename}`;
     dto.mediumUrl = `${baseUrl}/uploads/photos/${photo.groupId}/medium/${photo.filename}`;
     dto.originalUrl = `${baseUrl}/uploads/photos/${photo.groupId}/original/${photo.filename}`;
-    dto.uploaderName = photo.uploader?.name ?? undefined;
+    dto.uploaderName = photo.uploader?.name ?? photo.kakaoName ?? undefined;
     dto.createdAt = photo.createdAt;
     return dto;
   }
