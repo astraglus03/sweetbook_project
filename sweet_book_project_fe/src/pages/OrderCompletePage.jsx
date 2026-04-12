@@ -179,6 +179,31 @@ export default function OrderCompletePage() {
           </div>
         )}
 
+        {/* 운송장 (배송 시작 후) */}
+        {order.trackingNumber && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 lg:p-6">
+            <h3 className="text-base font-bold text-amber-900 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+              </svg>
+              배송 중
+            </h3>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-amber-800">운송장 번호</dt>
+                <dd className="text-amber-900 font-mono font-bold">{order.trackingNumber}</dd>
+              </div>
+              {order.carrierCode && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-amber-800">배송사</dt>
+                  <dd className="text-amber-900">{order.carrierCode}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
         {/* 주문 정보 */}
         <div className="bg-white rounded-2xl border border-warm-border p-5 lg:p-6">
           <h3 className="text-base font-bold text-ink mb-4">주문 정보</h3>
@@ -191,6 +216,12 @@ export default function OrderCompletePage() {
               <div className="flex justify-between gap-4">
                 <dt className="text-ink-sub flex-shrink-0">주문 번호</dt>
                 <dd className="text-ink text-right font-mono text-xs">{order.sweetbookOrderUid}</dd>
+              </div>
+            )}
+            {order.expectedPrintDate && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-sub flex-shrink-0">제작 예정일</dt>
+                <dd className="text-ink text-right">{new Date(order.expectedPrintDate).toLocaleDateString('ko-KR')}</dd>
               </div>
             )}
             <div className="flex justify-between gap-4">

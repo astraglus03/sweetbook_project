@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './config/typeorm.config';
 import { validateEnv } from './config/env.validation';
@@ -17,6 +18,7 @@ import { BooksModule } from './domains/books/books.module';
 import { OrdersModule } from './domains/orders/orders.module';
 import { NotificationsModule } from './domains/notifications/notifications.module';
 import { KakaoImportModule } from './domains/kakao-import/kakao-import.module';
+import { WebhooksModule } from './domains/webhooks/webhooks.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
 
@@ -31,6 +33,7 @@ import { OpenAiModule } from './external/openai/openai.module';
       inject: [ConfigService],
       useFactory: typeOrmConfig,
     }),
+    ScheduleModule.forRoot(),
     RedisModule,
     EmailModule,
     AuthModule,
@@ -41,6 +44,7 @@ import { OpenAiModule } from './external/openai/openai.module';
     OrdersModule,
     NotificationsModule,
     KakaoImportModule,
+    WebhooksModule,
     SweetbookModule,
     OpenAiModule,
   ],

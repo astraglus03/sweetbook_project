@@ -176,8 +176,16 @@ function OrderCard({ order }) {
         </div>
       </div>
 
-      {/* Shipping + cancel */}
+      {/* Shipping + tracking + cancel */}
       <div className="bg-warm-bg/40 border-t border-warm-border px-4 lg:px-5 py-3 space-y-2">
+        {order.trackingNumber && (
+          <div className="flex items-start gap-2 text-[12px]">
+            <span className="text-ink-muted w-16 flex-shrink-0">운송장</span>
+            <span className="text-ink font-mono font-semibold">
+              {order.carrierCode && `${order.carrierCode} · `}{order.trackingNumber}
+            </span>
+          </div>
+        )}
         <div className="flex items-start gap-2 text-[12px]">
           <span className="text-ink-muted w-16 flex-shrink-0">배송지</span>
           <span className="text-ink flex-1 truncate">
