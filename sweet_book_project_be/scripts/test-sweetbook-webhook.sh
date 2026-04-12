@@ -1,27 +1,33 @@
 #!/usr/bin/env bash
 # Sweetbook 웹훅 시뮬레이터
-# 사용: bash scripts/test-sweetbook-webhook.sh <orderUid>
-# 환경변수: NGROK_URL, SWEETBOOK_WEBHOOK_SECRET (.env에서 자동 로드)
+# 사용:
+#   bash scripts/test-sweetbook-webhook.sh <orderUid> [targetUrl]
+# 예:
+#   bash scripts/test-sweetbook-webhook.sh or_3eO5wOxoZMbT
+#   bash scripts/test-sweetbook-webhook.sh or_3eO5wOxoZMbT https://xxx.ngrok-free.dev
+#
+# SWEETBOOK_WEBHOOK_SECRET 은 .env 에서 자동 추출 (source 하지 않고 grep 으로 안전하게).
 
 set -e
 
 ORDER_UID="${1:-}"
+TARGET_BASE="${2:-${NGROK_URL:-http://localhost:3000}}"
+
 if [ -z "$ORDER_UID" ]; then
-  echo "❌ usage: bash scripts/test-sweetbook-webhook.sh <orderUid>"
+  echo "❌ usage: bash scripts/test-sweetbook-webhook.sh <orderUid> [targetUrl]"
   echo "   e.g. bash scripts/test-sweetbook-webhook.sh or_3eO5wOxoZMbT"
+  echo "        bash scripts/test-sweetbook-webhook.sh or_3eO5wOxoZMbT https://xxx.ngrok-free.dev"
   exit 1
 fi
 
-# .env 로드 (SWEETBOOK_WEBHOOK_SECRET + NGROK_URL)
+# .env 에서 SWEETBOOK_WEBHOOK_SECRET 만 안전하게 추출 (source 사용 안 함 — 공백/주석 내성)
+SECRET=""
 if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+  SECRET=$(grep -E '^SWEETBOOK_WEBHOOK_SECRET=' .env | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
 fi
+SECRET="${SWEETBOOK_WEBHOOK_SECRET:-$SECRET}"
 
-NGROK_URL="${NGROK_URL:-http://localhost:3000}"
-SECRET="${SWEETBOOK_WEBHOOK_SECRET:-}"
+NGROK_URL="$TARGET_BASE"
 
 if [ -z "$SECRET" ]; then
   echo "❌ SWEETBOOK_WEBHOOK_SECRET 이 .env 에 설정되지 않았습니다"
