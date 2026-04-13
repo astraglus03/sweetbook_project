@@ -22,6 +22,7 @@ const TABS = [
   { key: 'books', label: '포토북' },
   { key: 'orders', label: '주문' },
   { key: 'activity', label: '활동' },
+  { key: 'cover', label: '표지투표' },
 ];
 
 const STATUS_LABELS = {
@@ -293,7 +294,13 @@ export function GroupDetailPage() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                if (tab.key === 'cover') {
+                  navigate(`/groups/${groupId}/cover-voting`);
+                } else {
+                  setActiveTab(tab.key);
+                }
+              }}
               className={`pb-3 pt-3 px-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-brand text-brand'
