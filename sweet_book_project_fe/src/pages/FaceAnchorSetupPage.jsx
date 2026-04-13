@@ -6,6 +6,7 @@ import {
   useDeleteFaceAnchor,
   useGeneratePersonalBookForMe,
 } from '../features/books/personal/hooks/usePersonalBook';
+import { useFaceModelHealth } from '../features/photos/hooks/useFaceModelHealth';
 
 const MAX_SLOTS = 5;
 const MIN_SLOTS = 3;
@@ -24,6 +25,8 @@ export function FaceAnchorSetupPage() {
   const registerMut = useRegisterFaceAnchor(numGroupId);
   const deleteMut = useDeleteFaceAnchor(numGroupId);
   const generateMut = useGeneratePersonalBookForMe(numGroupId);
+  const { data: modelHealth } = useFaceModelHealth();
+  const modelReady = modelHealth?.ready === true;
 
   const handleAddFiles = (e) => {
     const picked = Array.from(e.target.files ?? []).slice(
@@ -114,6 +117,11 @@ export function FaceAnchorSetupPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 lg:px-8 py-8 space-y-6">
+        {!modelReady && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            얼굴 인식 모델 준비 중이에요. 잠시 후 다시 시도해주세요.
+          </div>
+        )}
         {anchorLoading ? (
           <div className="h-40 flex items-center justify-center">
             <div className="animate-spin w-6 h-6 border-2 border-brand border-t-transparent rounded-full" />
@@ -141,7 +149,7 @@ export function FaceAnchorSetupPage() {
             <div className="mt-6 pt-6 border-t border-[#E5E0D8] space-y-3">
               <button
                 onClick={handleGenerate}
-                disabled={generateMut.isPending}
+                disabled={generateMut.isPending || !modelReady}
                 className="w-full bg-brand text-white rounded-xl py-3 font-semibold hover:opacity-90 disabled:opacity-50"
               >
                 {generateMut.isPending

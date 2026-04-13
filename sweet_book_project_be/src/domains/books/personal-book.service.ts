@@ -121,14 +121,20 @@ export class PersonalBookService {
           bookType: 'PERSONAL',
         },
       });
-      if (
-        existing &&
-        !['AUTO_GENERATING', 'READY_TO_REVIEW'].includes(existing.status)
-      ) {
-        throw new ValidationException(
-          'PERSONAL_BOOK_ALREADY_EDITING',
-          '이미 편집 중인 개인 포토북이 있어요',
-        );
+      if (existing) {
+        const BLOCKED_STATUSES = ['ORDERED', 'READY', 'PROCESSING', 'UPLOADING'];
+        if (BLOCKED_STATUSES.includes(existing.status)) {
+          throw new ForbiddenException(
+            'PERSONAL_BOOK_ALREADY_FINALIZED',
+            '이미 확정된 개인 포토북은 다시 매칭할 수 없어요',
+          );
+        }
+        if (!['AUTO_GENERATING', 'READY_TO_REVIEW'].includes(existing.status)) {
+          throw new ValidationException(
+            'PERSONAL_BOOK_STATE_INVALID',
+            '현재 상태에서는 재매칭할 수 없어요',
+          );
+        }
       }
 
       let book: Book;
