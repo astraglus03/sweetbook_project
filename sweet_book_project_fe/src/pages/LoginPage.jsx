@@ -35,7 +35,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex page-enter">
       {/* Left panel — desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#1A1A1A] flex-col justify-between px-[60px] py-[60px]">
+      <div className="hidden lg:flex lg:w-1/2 bg-ink flex-col justify-between px-[60px] py-[60px]">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -72,7 +72,7 @@ export function LoginPage() {
       </div>
 
       {/* Right panel — form */}
-      <div className="w-full lg:w-1/2 bg-[#F8F5F0] flex flex-col items-center justify-center px-6 py-12">
+      <div className="w-full lg:w-1/2 bg-warm-bg flex flex-col items-center justify-center px-6 py-12">
         {/* Mobile logo */}
         <div className="flex lg:hidden flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-1">
@@ -82,17 +82,17 @@ export function LoginPage() {
               <path d="M6 20H18" stroke="#D4916E" strokeWidth="1.75" strokeLinecap="round" />
               <path d="M12 16V20" stroke="#D4916E" strokeWidth="1.75" strokeLinecap="round" />
             </svg>
-            <span className="font-display font-bold text-[#1A1A1A] text-lg tracking-wide">GroupBook</span>
+            <span className="font-display font-bold text-ink text-lg tracking-wide">GroupBook</span>
           </div>
         </div>
 
         <div className="w-full max-w-[400px]">
           {/* Header */}
           <div className="mb-7">
-            <h1 className="font-display text-2xl font-bold text-[#1A1A1A] mb-1.5">
+            <h1 className="font-display text-2xl font-bold text-ink mb-1.5">
               다시 오신 걸 환영합니다
             </h1>
-            <p className="text-[#6B6B6B] text-sm">로그인하고 모임으로 돌아가세요</p>
+            <p className="text-ink-sub text-sm">로그인하고 모임으로 돌아가세요</p>
           </div>
 
           {oauthError && (
@@ -106,7 +106,7 @@ export function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-[13px] font-medium text-[#1A1A1A] mb-1.5">
+              <label htmlFor="email" className="block text-[13px] font-medium text-ink mb-1.5">
                 이메일
               </label>
               <input
@@ -116,13 +116,13 @@ export function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-12 px-3.5 bg-white border border-[#E5E0D8] rounded-[10px] text-[#1A1A1A] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#D4916E] focus:border-transparent transition"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-ink text-sm placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition"
                 placeholder="hong@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-[13px] font-medium text-[#1A1A1A] mb-1.5">
+              <label htmlFor="password" className="block text-[13px] font-medium text-ink mb-1.5">
                 비밀번호
               </label>
               <input
@@ -132,7 +132,7 @@ export function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-12 px-3.5 bg-white border border-[#E5E0D8] rounded-[10px] text-[#1A1A1A] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#D4916E] focus:border-transparent transition"
+                className="w-full h-12 px-3.5 bg-white border border-warm-border rounded-[10px] text-ink text-sm placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition"
                 placeholder="비밀번호를 입력하세요"
               />
             </div>
@@ -165,7 +165,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={login.isPending}
-              className="w-full h-12 bg-[#D4916E] hover:bg-[#C07E5C] text-white font-semibold rounded-full text-sm transition disabled:opacity-50 mt-1"
+              className="w-full h-12 bg-brand hover:bg-brand-hover text-white font-semibold rounded-full text-sm transition disabled:opacity-50 mt-1"
             >
               {login.isPending ? '로그인 중...' : '로그인'}
             </button>
@@ -173,9 +173,9 @@ export function LoginPage() {
 
           {/* Divider */}
           <div className="my-5 flex items-center gap-3">
-            <div className="flex-1 h-px bg-[#E5E0D8]" />
-            <span className="text-xs text-[#9B9B9B]">또는</span>
-            <div className="flex-1 h-px bg-[#E5E0D8]" />
+            <div className="flex-1 h-px bg-warm-border" />
+            <span className="text-xs text-ink-muted">또는</span>
+            <div className="flex-1 h-px bg-warm-border" />
           </div>
 
           {/* OAuth buttons */}
@@ -183,7 +183,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => handleOAuth('google')}
-              className="w-full h-12 bg-white border border-[#E5E0D8] rounded-[10px] text-sm font-medium text-[#1A1A1A] hover:bg-[#F8F5F0] transition flex items-center justify-center gap-2.5"
+              className="w-full h-12 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-ink hover:bg-warm-bg transition flex items-center justify-center gap-2.5"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                 <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
@@ -206,11 +206,11 @@ export function LoginPage() {
           </div>
 
           {/* Footer */}
-          <p className="mt-7 text-center text-sm text-[#6B6B6B]">
+          <p className="mt-7 text-center text-sm text-ink-sub">
             계정이 없으신가요?{' '}
             <Link
               to={redirectTo !== '/groups' ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup'}
-              className="text-[#D4916E] font-semibold hover:underline"
+              className="text-brand font-semibold hover:underline"
             >
               회원가입
             </Link>

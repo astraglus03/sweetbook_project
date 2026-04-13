@@ -5,7 +5,9 @@ export class AddKakaoImport1744588800000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // photos: uploaderId nullable + kakaoName 컬럼 추가
-    await queryRunner.query(`ALTER TABLE "photos" ALTER COLUMN "uploaderId" DROP NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "photos" ALTER COLUMN "uploaderId" DROP NOT NULL`,
+    );
     await queryRunner.query(
       `ALTER TABLE "photos" ADD COLUMN IF NOT EXISTS "kakaoName" varchar(100)`,
     );
@@ -35,6 +37,8 @@ export class AddKakaoImport1744588800000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "kakao_name_mappings"`);
     await queryRunner.query(`DROP INDEX "idx_photos_kakao_name"`);
     await queryRunner.query(`ALTER TABLE "photos" DROP COLUMN "kakaoName"`);
-    await queryRunner.query(`ALTER TABLE "photos" ALTER COLUMN "uploaderId" SET NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "photos" ALTER COLUMN "uploaderId" SET NOT NULL`,
+    );
   }
 }

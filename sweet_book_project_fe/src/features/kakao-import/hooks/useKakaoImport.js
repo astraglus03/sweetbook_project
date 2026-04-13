@@ -14,16 +14,3 @@ export function useKakaoImport(groupId) {
     },
   });
 }
-
-export function useSaveKakaoMappings(groupId) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (mappings) => {
-      const res = await kakaoImportApi.saveMappings(groupId, mappings);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['photos', groupId] });
-    },
-  });
-}

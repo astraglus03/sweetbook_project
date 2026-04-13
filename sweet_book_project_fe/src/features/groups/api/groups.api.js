@@ -5,6 +5,10 @@ export const groupsApi = {
   getMyGroups: (params) => api.get('/groups', { params }),
   getDetail: (groupId) => api.get(`/groups/${groupId}`),
   update: (groupId, payload) => api.patch(`/groups/${groupId}`, payload),
+  updateStatus: (groupId, status) =>
+    api.patch(`/groups/${groupId}/status`, { status }),
+  getFaceDetectionStatus: (groupId) =>
+    api.get(`/groups/${groupId}/face-detection-status`),
   delete: (groupId) => api.delete(`/groups/${groupId}`),
   getByInviteCode: (code) => api.get(`/groups/join/${code}`),
   join: (groupId, payload) => api.post(`/groups/${groupId}/join`, payload),

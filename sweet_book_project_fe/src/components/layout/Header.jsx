@@ -11,14 +11,18 @@ export function Header() {
   return (
     <header className="hidden lg:block h-14 bg-white border-b border-warm-border">
       <div className="max-w-6xl mx-auto px-6 h-full flex justify-between items-center">
-        {/* Left: Logo */}
-        <div className="flex items-center gap-2">
+        {/* Left: Logo (click → home) */}
+        <button
+          type="button"
+          onClick={() => navigate('/groups')}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D4916E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>
           <span className="font-sans font-bold text-ink text-[18px]">GroupBook</span>
-        </div>
+        </button>
 
         {/* Center: Nav tabs */}
         <nav className="flex items-center gap-6">
@@ -30,12 +34,22 @@ export function Header() {
           >
             내 모임
           </NavLink>
-          <a href="#" className="text-[14px] font-medium text-ink-sub hover:text-ink transition-colors">
-            둘러보기
-          </a>
-          <a href="#" className="text-[14px] font-medium text-ink-sub hover:text-ink transition-colors">
-            도움말
-          </a>
+          <NavLink
+            to="/orders"
+            className={({ isActive }) =>
+              `text-[14px] font-medium transition-colors ${isActive ? 'text-brand' : 'text-ink-sub hover:text-ink'}`
+            }
+          >
+            주문
+          </NavLink>
+          <NavLink
+            to="/notifications"
+            className={({ isActive }) =>
+              `text-[14px] font-medium transition-colors ${isActive ? 'text-brand' : 'text-ink-sub hover:text-ink'}`
+            }
+          >
+            알림
+          </NavLink>
         </nav>
 
         {/* Right: Bell + Avatar */}

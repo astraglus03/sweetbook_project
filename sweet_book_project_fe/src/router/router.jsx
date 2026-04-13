@@ -1,50 +1,61 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { LandingPage } from '../pages/LandingPage';
-import { LoginPage } from '../pages/LoginPage';
-import { SignupPage } from '../pages/SignupPage';
-import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '../pages/ResetPasswordPage';
-import { GroupsPage } from '../pages/GroupsPage';
-import { GroupDetailPage } from '../pages/GroupDetailPage';
-import CreateGroupPage from '../pages/CreateGroupPage';
-import ProfilePage from '../pages/ProfilePage';
-import { NotificationsPage } from '../pages/NotificationsPage';
-import { BookTemplatesPage } from '../pages/BookTemplatesPage';
-import { BookCreatePage } from '../pages/BookCreatePage';
-import { BookEditorPage } from '../pages/BookEditorPage';
-import { BookPreviewPage } from '../pages/BookPreviewPage';
-import { OrdersPage } from '../pages/OrdersPage';
-import OrderPage from '../pages/OrderPage';
-import OrderCompletePage from '../pages/OrderCompletePage';
-import { JoinPage } from '../pages/JoinPage';
-import { SharedViewerPage } from '../pages/SharedViewerPage';
-import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from './ProtectedRoute';
+import {
+  S,
+  LandingPage,
+  LoginPage,
+  SignupPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+  GroupsPage,
+  GroupDetailPage,
+  CreateGroupPage,
+  ProfilePage,
+  NotificationsPage,
+  FaceAnchorSetupPage,
+  PersonalBooksPage,
+  PersonalBookReviewPage,
+  BookTemplatesPage,
+  BookCreatePage,
+  BookEditorPage,
+  BookPreviewPage,
+  OrderPage,
+  OrdersPage,
+  OrderCompletePage,
+  JoinPage,
+  SharedViewerPage,
+  NotFoundPage,
+  ActivityFeedPage,
+} from './RouteSuspense';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <LandingPage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/signup', element: <SignupPage /> },
-  { path: '/forgot-password', element: <ForgotPasswordPage /> },
-  { path: '/reset-password/:token', element: <ResetPasswordPage /> },
-  { path: '/join/:code', element: <JoinPage /> },
-  { path: '/shared/:shareCode', element: <SharedViewerPage /> },
+  { path: '/', element: <S><LandingPage /></S> },
+  { path: '/login', element: <S><LoginPage /></S> },
+  { path: '/signup', element: <S><SignupPage /></S> },
+  { path: '/forgot-password', element: <S><ForgotPasswordPage /></S> },
+  { path: '/reset-password/:token', element: <S><ResetPasswordPage /></S> },
+  { path: '/join/:code', element: <S><JoinPage /></S> },
+  { path: '/shared/:shareCode', element: <S><SharedViewerPage /></S> },
   {
     element: <ProtectedRoute />,
     children: [
-      { path: '/groups', element: <GroupsPage /> },
-      { path: '/groups/new', element: <CreateGroupPage /> },
-      { path: '/groups/:groupId', element: <GroupDetailPage /> },
-      { path: '/profile', element: <ProfilePage /> },
-      { path: '/notifications', element: <NotificationsPage /> },
-      { path: '/groups/:groupId/books/templates', element: <BookTemplatesPage /> },
-      { path: '/groups/:groupId/books/new', element: <BookCreatePage /> },
-      { path: '/books/:bookId/editor', element: <BookEditorPage /> },
-      { path: '/books/:bookId/preview', element: <BookPreviewPage /> },
-      { path: '/books/:bookId/order', element: <OrderPage /> },
-      { path: '/orders', element: <OrdersPage /> },
-      { path: '/orders/:orderId/complete', element: <OrderCompletePage /> },
+      { path: '/groups', element: <S><GroupsPage /></S> },
+      { path: '/groups/new', element: <S><CreateGroupPage /></S> },
+      { path: '/groups/:groupId', element: <S><GroupDetailPage /></S> },
+      { path: '/groups/:groupId/activity', element: <S><ActivityFeedPage /></S> },
+      { path: '/profile', element: <S><ProfilePage /></S> },
+      { path: '/notifications', element: <S><NotificationsPage /></S> },
+      { path: '/groups/:groupId/face-anchor', element: <S><FaceAnchorSetupPage /></S> },
+      { path: '/groups/:groupId/books/personal', element: <S><PersonalBooksPage /></S> },
+      { path: '/groups/:groupId/books/personal/:bookId/review', element: <S><PersonalBookReviewPage /></S> },
+      { path: '/groups/:groupId/books/templates', element: <S><BookTemplatesPage /></S> },
+      { path: '/groups/:groupId/books/new', element: <S><BookCreatePage /></S> },
+      { path: '/books/:bookId/editor', element: <S><BookEditorPage /></S> },
+      { path: '/books/:bookId/preview', element: <S><BookPreviewPage /></S> },
+      { path: '/books/:bookId/order', element: <S><OrderPage /></S> },
+      { path: '/orders', element: <S><OrdersPage /></S> },
+      { path: '/orders/:orderId/complete', element: <S><OrderCompletePage /></S> },
     ],
   },
-  { path: '*', element: <NotFoundPage /> },
+  { path: '*', element: <S><NotFoundPage /></S> },
 ]);

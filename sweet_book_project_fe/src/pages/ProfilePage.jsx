@@ -326,7 +326,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => setNotifSettings((s) => ({ ...s, [item.key]: !s[item.key] }))}
                       className={`w-11 h-6 rounded-full p-0.5 transition-colors ${
-                        notifSettings[item.key] ? 'bg-brand' : 'bg-[#C5BEB6]'
+                        notifSettings[item.key] ? 'bg-brand' : 'bg-warm-tag'
                       }`}
                     >
                       <div

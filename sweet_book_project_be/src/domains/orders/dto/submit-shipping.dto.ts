@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class SubmitShippingDto {
   @ApiProperty({ description: '수령인 이름', maxLength: 50 })
@@ -34,7 +41,12 @@ export class SubmitShippingDto {
   @MaxLength(200)
   memo?: string;
 
-  @ApiProperty({ description: '주문 수량', minimum: 1, maximum: 100, default: 1 })
+  @ApiProperty({
+    description: '주문 수량',
+    minimum: 1,
+    maximum: 100,
+    default: 1,
+  })
   @IsInt()
   @Min(1)
   @Max(100)

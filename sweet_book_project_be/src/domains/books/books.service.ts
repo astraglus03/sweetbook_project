@@ -6,10 +6,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { SweetbookApiService } from '../../external/sweetbook/sweetbook.service';
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '../../common/exceptions';
+import { ForbiddenException, NotFoundException } from '../../common/exceptions';
 import { Book } from './entities/book.entity';
 import { BookPage } from './entities/book-page.entity';
 import { Photo } from '../photos/entities/photo.entity';
@@ -20,6 +17,7 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { UpdateCoverDto } from './dto/update-cover.dto';
 import { BookResponseDto } from './dto/book-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivitiesService } from '../activities/activities.service';
 
 interface BookSpec {
   bookSpecUid: string;
@@ -55,6 +53,7 @@ export class BooksService {
     private readonly sweetbookApiService: SweetbookApiService,
     private readonly configService: ConfigService,
     private readonly notificationsService: NotificationsService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async getBookSpecs() {
@@ -114,6 +113,13 @@ export class BooksService {
     saved.sweetbookBookUid = result.bookUid;
     saved.externalRef = externalRef;
     const updated = await this.bookRepository.save(saved);
+
+    await this.activitiesService.record({
+      groupId,
+      actorUserId: userId,
+      type: 'BOOK_CREATED',
+      payload: { title: dto.title },
+    });
 
     return BookResponseDto.from(updated);
   }
@@ -213,9 +219,9 @@ export class BooksService {
     const allTemplates = await this.sweetbookApiService.getTemplates(
       book.bookSpecUid,
     );
-    const templateList = (Array.isArray(allTemplates) ? allTemplates : []) as Array<
-      Record<string, unknown>
-    >;
+    const templateList = (
+      Array.isArray(allTemplates) ? allTemplates : []
+    ) as Array<Record<string, unknown>>;
 
     const byThemeAndKind = (theme: string, kind: string) =>
       templateList.find(
@@ -227,17 +233,19 @@ export class BooksService {
     const theme = book.theme;
     const coverTpl = byThemeAndKind(theme, 'cover');
     const contentTpl = byThemeAndKind(theme, 'content');
-    const blankTpl = templateList.find(
-      (t) =>
-        String(t.theme ?? '') === theme &&
-        String(t.templateKind ?? '').toLowerCase() === 'content' &&
-        /빈내지/.test(String(t.templateName ?? '')),
-    ) ?? templateList.find(
-      (t) =>
-        String(t.templateKind ?? '').toLowerCase() === 'content' &&
-        /빈내지/.test(String(t.templateName ?? '')) &&
-        String(t.theme ?? '') === '공용',
-    );
+    const blankTpl =
+      templateList.find(
+        (t) =>
+          String(t.theme ?? '') === theme &&
+          String(t.templateKind ?? '').toLowerCase() === 'content' &&
+          /빈내지/.test(String(t.templateName ?? '')),
+      ) ??
+      templateList.find(
+        (t) =>
+          String(t.templateKind ?? '').toLowerCase() === 'content' &&
+          /빈내지/.test(String(t.templateName ?? '')) &&
+          String(t.theme ?? '') === '공용',
+      );
     const publishTpl = byThemeAndKind(theme, 'publish');
 
     if (!coverTpl || !contentTpl) {
@@ -256,9 +264,13 @@ export class BooksService {
 
     // 템플릿 파라미터 정의 조회
     type ParamDef = { binding: string; required: boolean };
-    const fetchDefs = async (templateUid: string): Promise<Record<string, ParamDef>> => {
+    const fetchDefs = async (
+      templateUid: string,
+    ): Promise<Record<string, ParamDef>> => {
       try {
-        const detail = (await this.sweetbookApiService.getTemplateDetail(templateUid)) as {
+        const detail = (await this.sweetbookApiService.getTemplateDetail(
+          templateUid,
+        )) as {
           parameters?: { definitions?: Record<string, ParamDef> };
         };
         return detail?.parameters?.definitions ?? {};
@@ -281,7 +293,9 @@ export class BooksService {
       );
     };
     const fileKeys = (defs: Record<string, ParamDef>) =>
-      Object.entries(defs).filter(([, v]) => isFileBinding(v.binding)).map(([k]) => k);
+      Object.entries(defs)
+        .filter(([, v]) => isFileBinding(v.binding))
+        .map(([k]) => k);
     const isMultiFileBinding = (binding: string) => {
       const b = binding.toLowerCase();
       return (
@@ -356,7 +370,9 @@ export class BooksService {
         continue;
       }
 
-      const photo = await this.photoRepository.findOne({ where: { id: photoId } });
+      const photo = await this.photoRepository.findOne({
+        where: { id: photoId },
+      });
       if (!photo) {
         this.logger.warn(`Cover photo id=${photoId} not found — skipping`);
         delete coverParams[fk];
@@ -376,7 +392,9 @@ export class BooksService {
       );
       uploadedFileNames.set(photo.id, uploaded.fileName);
       coverParams[fk] = uploaded.fileName;
-      this.logger.log(`Uploaded cover photo ${photo.id} → ${uploaded.fileName}`);
+      this.logger.log(
+        `Uploaded cover photo ${photo.id} → ${uploaded.fileName}`,
+      );
     }
 
     // 사용자가 표지 사진을 지정하지 않았으면 첫 번째 내지 사진으로 fallback
@@ -395,7 +413,8 @@ export class BooksService {
       if (coverParams[key]) continue;
       if (/title|spineTitle/i.test(key)) coverParams[key] = book.title;
       else if (/subtitle/i.test(key)) coverParams[key] = book.subtitle ?? ' ';
-      else if (/dateRange/i.test(key)) coverParams[key] = new Date().getFullYear().toString();
+      else if (/dateRange/i.test(key))
+        coverParams[key] = new Date().getFullYear().toString();
       else coverParams[key] = ' ';
     }
     await this.sweetbookApiService.addCover(book.sweetbookBookUid, {
@@ -499,7 +518,9 @@ export class BooksService {
       book.status = 'READY';
       book.pageCount = targetPageCount;
       await this.bookRepository.save(book);
-      this.logger.log(`Book ${bookId} finalized (${targetPageCount} pages, theme=${theme})`);
+      this.logger.log(
+        `Book ${bookId} finalized (${targetPageCount} pages, theme=${theme})`,
+      );
 
       // 그룹 멤버 전원에게 BOOK_READY 알림
       try {
@@ -516,8 +537,17 @@ export class BooksService {
           });
         }
       } catch (notifyErr) {
-        this.logger.warn(`BOOK_READY notification failed: ${String(notifyErr)}`);
+        this.logger.warn(
+          `BOOK_READY notification failed: ${String(notifyErr)}`,
+        );
       }
+
+      await this.activitiesService.record({
+        groupId: book.groupId,
+        actorUserId: userId,
+        type: 'BOOK_FINALIZED',
+        payload: { title: book.title },
+      });
     } catch (err) {
       this.logger.error(`Finalization failed: ${err}`);
       book.status = 'FAILED';
@@ -570,7 +600,9 @@ export class BooksService {
       : null;
 
     const contentPages = pages.map((page) => {
-      const urls = page.photo ? photoUrls(page.photo) : { thumbnailUrl: null, mediumUrl: null };
+      const urls = page.photo
+        ? photoUrls(page.photo)
+        : { thumbnailUrl: null, mediumUrl: null };
       return {
         id: page.id,
         bookId: page.bookId,
@@ -624,14 +656,19 @@ export class BooksService {
       where: { id: pageId, bookId },
     });
     if (!page) {
-      throw new NotFoundException('BOOK_PAGE_NOT_FOUND', '페이지를 찾을 수 없습니다');
+      throw new NotFoundException(
+        'BOOK_PAGE_NOT_FOUND',
+        '페이지를 찾을 수 없습니다',
+      );
     }
 
     if (dto.photoId !== undefined) page.photoId = dto.photoId;
-    if (dto.contentTemplateUid !== undefined) page.contentTemplateUid = dto.contentTemplateUid;
+    if (dto.contentTemplateUid !== undefined)
+      page.contentTemplateUid = dto.contentTemplateUid;
     if (dto.chapterTitle !== undefined) page.chapterTitle = dto.chapterTitle;
     if (dto.caption !== undefined) page.caption = dto.caption;
-    if (dto.templateParams !== undefined) page.templateParams = dto.templateParams;
+    if (dto.templateParams !== undefined)
+      page.templateParams = dto.templateParams;
     if (dto.pageNumber !== undefined) page.pageNumber = dto.pageNumber;
 
     await this.bookPageRepository.save(page);
@@ -649,7 +686,10 @@ export class BooksService {
       where: { id: pageId, bookId },
     });
     if (!page) {
-      throw new NotFoundException('BOOK_PAGE_NOT_FOUND', '페이지를 찾을 수 없습니다');
+      throw new NotFoundException(
+        'BOOK_PAGE_NOT_FOUND',
+        '페이지를 찾을 수 없습니다',
+      );
     }
 
     await this.bookPageRepository.remove(page);
@@ -694,10 +734,12 @@ export class BooksService {
     const book = await this.findBookOrFail(bookId);
     if (!book.theme) return { cover: [], content: [] };
 
-    const allTemplates = await this.sweetbookApiService.getTemplates(book.bookSpecUid);
-    const templateList = (Array.isArray(allTemplates) ? allTemplates : []) as Array<
-      Record<string, unknown>
-    >;
+    const allTemplates = await this.sweetbookApiService.getTemplates(
+      book.bookSpecUid,
+    );
+    const templateList = (
+      Array.isArray(allTemplates) ? allTemplates : []
+    ) as Array<Record<string, unknown>>;
 
     const themeTemplates = templateList.filter(
       (t) => String(t.theme ?? '') === book.theme,
@@ -707,9 +749,14 @@ export class BooksService {
       const tUid = String(t.templateUid ?? '');
       const thumbs = t.thumbnails as Record<string, string> | undefined;
       try {
-        const detail = (await this.sweetbookApiService.getTemplateDetail(tUid)) as {
+        const detail = (await this.sweetbookApiService.getTemplateDetail(
+          tUid,
+        )) as {
           parameters?: {
-            definitions?: Record<string, { binding: string; required: boolean; description: string }>;
+            definitions?: Record<
+              string,
+              { binding: string; required: boolean; description: string }
+            >;
           };
           layout?: {
             elements?: Array<{
@@ -743,7 +790,11 @@ export class BooksService {
           parameters: Object.fromEntries(
             Object.entries(defs).map(([k, v]) => [
               k,
-              { binding: v.binding, required: v.required, description: v.description },
+              {
+                binding: v.binding,
+                required: v.required,
+                description: v.description,
+              },
             ]),
           ),
           elements,
@@ -788,14 +839,18 @@ export class BooksService {
       return { cover: null, content: null };
     }
 
-    const allTemplates = await this.sweetbookApiService.getTemplates(book.bookSpecUid);
-    const templateList = (Array.isArray(allTemplates) ? allTemplates : []) as Array<
-      Record<string, unknown>
-    >;
+    const allTemplates = await this.sweetbookApiService.getTemplates(
+      book.bookSpecUid,
+    );
+    const templateList = (
+      Array.isArray(allTemplates) ? allTemplates : []
+    ) as Array<Record<string, unknown>>;
 
     const findByThemeKind = (theme: string, kind: string) =>
       templateList.find(
-        (t) => String(t.theme ?? '') === theme && String(t.templateKind ?? '') === kind,
+        (t) =>
+          String(t.theme ?? '') === theme &&
+          String(t.templateKind ?? '') === kind,
       );
 
     const coverTpl = findByThemeKind(book.theme, 'cover');
@@ -806,9 +861,26 @@ export class BooksService {
       const uid = String(t.templateUid ?? '');
       const thumbs = t.thumbnails as Record<string, string> | undefined;
       try {
-        const detail = (await this.sweetbookApiService.getTemplateDetail(uid)) as {
-          parameters?: { definitions?: Record<string, { binding: string; required: boolean; description: string }> };
-          layout?: { elements?: Array<{ element_id: string; type: string; position: { x: number; y: number }; width: number; height: number; fileName?: string; text?: string }> };
+        const detail = (await this.sweetbookApiService.getTemplateDetail(
+          uid,
+        )) as {
+          parameters?: {
+            definitions?: Record<
+              string,
+              { binding: string; required: boolean; description: string }
+            >;
+          };
+          layout?: {
+            elements?: Array<{
+              element_id: string;
+              type: string;
+              position: { x: number; y: number };
+              width: number;
+              height: number;
+              fileName?: string;
+              text?: string;
+            }>;
+          };
         };
         return {
           templateUid: uid,
@@ -822,7 +894,9 @@ export class BooksService {
             y: el.position?.y ?? 0,
             width: el.width ?? 0,
             height: el.height ?? 0,
-            isVariable: !!(el.fileName?.includes('$$') || el.text?.includes('$$')),
+            isVariable: !!(
+              el.fileName?.includes('$$') || el.text?.includes('$$')
+            ),
             variableName: (el.fileName ?? el.text ?? '').replace(/\$\$/g, ''),
           })),
         };
@@ -846,13 +920,17 @@ export class BooksService {
   }
 
   async getThemes(bookSpecUid: string) {
-    const allTemplates = await this.sweetbookApiService.getTemplates(bookSpecUid);
-    const templateList = (Array.isArray(allTemplates) ? allTemplates : []) as Array<
-      Record<string, unknown>
-    >;
+    const allTemplates =
+      await this.sweetbookApiService.getTemplates(bookSpecUid);
+    const templateList = (
+      Array.isArray(allTemplates) ? allTemplates : []
+    ) as Array<Record<string, unknown>>;
 
     // 테마별로 그룹핑, 알림장 제외 (유치원 전용)
-    const themeMap = new Map<string, { kinds: Set<string>; thumbnail?: string }>();
+    const themeMap = new Map<
+      string,
+      { kinds: Set<string>; thumbnail?: string }
+    >();
     for (const t of templateList) {
       const theme = String(t.theme ?? '');
       if (!theme || theme === '공용' || /알림장/.test(theme)) continue;
@@ -862,10 +940,7 @@ export class BooksService {
       }
       const entry = themeMap.get(theme)!;
       entry.kinds.add(String(t.templateKind ?? ''));
-      if (
-        String(t.templateKind ?? '') === 'cover' &&
-        !entry.thumbnail
-      ) {
+      if (String(t.templateKind ?? '') === 'cover' && !entry.thumbnail) {
         const thumbs = t.thumbnails as Record<string, string> | undefined;
         entry.thumbnail = thumbs?.layout ?? undefined;
       }
@@ -897,7 +972,9 @@ export class BooksService {
       try {
         await this.sweetbookApiService.deleteBook(book.sweetbookBookUid);
       } catch {
-        this.logger.warn(`Failed to delete old Sweetbook book ${book.sweetbookBookUid}`);
+        this.logger.warn(
+          `Failed to delete old Sweetbook book ${book.sweetbookBookUid}`,
+        );
       }
     }
 
@@ -917,7 +994,9 @@ export class BooksService {
     book.status = 'DRAFT';
     await this.bookRepository.save(book);
 
-    this.logger.log(`Book ${bookId} reset to DRAFT → new bookUid: ${result.bookUid}`);
+    this.logger.log(
+      `Book ${bookId} reset to DRAFT → new bookUid: ${result.bookUid}`,
+    );
   }
 
   async getBookSpecInfo(bookId: number) {
@@ -948,7 +1027,10 @@ export class BooksService {
   private async findBookOrFail(bookId: number): Promise<Book> {
     const book = await this.bookRepository.findOne({ where: { id: bookId } });
     if (!book) {
-      throw new NotFoundException('BOOK_NOT_FOUND', '포토북을 찾을 수 없습니다');
+      throw new NotFoundException(
+        'BOOK_NOT_FOUND',
+        '포토북을 찾을 수 없습니다',
+      );
     }
     return book;
   }

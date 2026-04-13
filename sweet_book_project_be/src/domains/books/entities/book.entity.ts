@@ -21,12 +21,20 @@ export type BookStatus =
   | 'PROCESSING'
   | 'READY'
   | 'ORDERED'
-  | 'FAILED';
+  | 'FAILED'
+  | 'AUTO_GENERATING'
+  | 'READY_TO_REVIEW';
 
 @Entity('books')
 @Index('idx_books_group_id', ['groupId'])
-@Index('idx_books_sweetbook_uid', ['sweetbookBookUid'], { unique: true, where: '"sweetbookBookUid" IS NOT NULL' })
-@Index('idx_books_share_code', ['shareCode'], { unique: true, where: '"shareCode" IS NOT NULL' })
+@Index('idx_books_sweetbook_uid', ['sweetbookBookUid'], {
+  unique: true,
+  where: '"sweetbookBookUid" IS NOT NULL',
+})
+@Index('idx_books_share_code', ['shareCode'], {
+  unique: true,
+  where: '"shareCode" IS NOT NULL',
+})
 export class Book {
   @PrimaryGeneratedColumn()
   id: number;

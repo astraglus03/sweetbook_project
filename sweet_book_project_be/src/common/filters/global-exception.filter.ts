@@ -27,7 +27,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const error =
       body && typeof body === 'object' && 'code' in body
         ? (body as { code: string; message: string })
-        : { code: 'INTERNAL_SERVER_ERROR', message: '서버 오류가 발생했습니다' };
+        : {
+            code: 'INTERNAL_SERVER_ERROR',
+            message: '서버 오류가 발생했습니다',
+          };
 
     if (status >= 500) {
       this.logger.error(exception);

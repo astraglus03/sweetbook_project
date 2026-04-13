@@ -10,7 +10,4 @@ export const kakaoImportApi = {
       timeout: 120000, // 2분
     });
   },
-  getUnmatched: (groupId) => api.get(`/groups/${groupId}/kakao-import/unmatched`),
-  saveMappings: (groupId, mappings) =>
-    api.post(`/groups/${groupId}/kakao-import/mappings`, { mappings }),
 };

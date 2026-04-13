@@ -1,21 +1,16 @@
 import { useState } from 'react';
-import { usePhotos, useChapters, useDeletePhoto } from '../hooks/usePhotos';
+import { usePhotos, useDeletePhoto } from '../hooks/usePhotos';
 
 export function PhotoGallery({ groupId, onUploadClick }) {
   const [page, setPage] = useState(1);
-  const [selectedChapter, setSelectedChapter] = useState(null);
-  const { data: chaptersData } = useChapters(groupId);
   const { data, isLoading, isError } = usePhotos(groupId, {
     page,
     limit: 20,
-    chapter: selectedChapter,
   });
   const deletePhoto = useDeletePhoto(groupId);
 
   const photos = data?.photos ?? [];
   const meta = data?.meta;
-  const chapters = chaptersData ?? [];
-  const totalCount = chapters.reduce((sum, c) => sum + c.count, 0);
 
   const handleDelete = (photoId) => {
     if (!window.confirm('이 사진을 삭제하시겠습니까?')) return;
@@ -24,24 +19,10 @@ export function PhotoGallery({ groupId, onUploadClick }) {
 
   if (isLoading) {
     return (
-      <div className="flex gap-5">
-        {/* Sidebar skeleton */}
-        <div className="hidden lg:block w-[240px] flex-shrink-0">
-          <div className="animate-pulse space-y-3 p-4">
-            <div className="h-4 w-20 bg-warm-border rounded" />
-            <div className="h-8 bg-warm-border rounded" />
-            <div className="h-8 bg-warm-border rounded" />
-            <div className="h-8 bg-warm-border rounded" />
-          </div>
-        </div>
-        {/* Grid skeleton */}
-        <div className="flex-1">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="aspect-square bg-warm-border rounded-lg animate-pulse" />
-            ))}
-          </div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <div key={i} className="aspect-square bg-warm-border rounded-lg animate-pulse" />
+        ))}
       </div>
     );
   }
@@ -55,52 +36,12 @@ export function PhotoGallery({ groupId, onUploadClick }) {
   }
 
   return (
-    <div className="flex gap-5">
-      {/* Sidebar — desktop only */}
-      <aside className="hidden lg:block w-[240px] flex-shrink-0 bg-white rounded-2xl border border-warm-border p-4">
-        <h3 className="text-sm font-bold text-ink mb-4">사진 필터</h3>
-
-        {/* Chapters */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-ink-muted mb-2">챕터</p>
-          <div className="space-y-1">
-            <button
-              type="button"
-              onClick={() => { setSelectedChapter(null); setPage(1); }}
-              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-colors ${
-                !selectedChapter
-                  ? 'bg-brand/10 text-brand font-semibold'
-                  : 'text-ink-sub hover:bg-warm-bg'
-              }`}
-            >
-              <span>전체</span>
-              <span className="text-xs">{totalCount}</span>
-            </button>
-            {chapters.map((ch) => (
-              <button
-                key={ch.chapter}
-                type="button"
-                onClick={() => { setSelectedChapter(ch.chapter === '미분류' ? null : ch.chapter); setPage(1); }}
-                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-colors ${
-                  selectedChapter === ch.chapter
-                    ? 'bg-brand/10 text-brand font-semibold'
-                    : 'text-ink-sub hover:bg-warm-bg'
-                }`}
-              >
-                <span>{ch.chapter}</span>
-                <span className="text-xs opacity-60">{ch.count}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main gallery */}
+    <div>
       <div className="flex-1 min-w-0">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-ink">
-            {selectedChapter ?? '전체'} 사진 ({meta?.total ?? 0}장)
+            전체 사진 ({meta?.total ?? 0}장)
           </h2>
           <div className="flex gap-2">
             <button
@@ -114,35 +55,6 @@ export function PhotoGallery({ groupId, onUploadClick }) {
               업로드
             </button>
           </div>
-        </div>
-
-        {/* Mobile chapter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-3 lg:hidden">
-          <button
-            type="button"
-            onClick={() => { setSelectedChapter(null); setPage(1); }}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              !selectedChapter
-                ? 'bg-brand text-white'
-                : 'bg-white border border-warm-border text-ink-sub'
-            }`}
-          >
-            전체 {totalCount}
-          </button>
-          {chapters.map((ch) => (
-            <button
-              key={ch.chapter}
-              type="button"
-              onClick={() => { setSelectedChapter(ch.chapter === '미분류' ? null : ch.chapter); setPage(1); }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                selectedChapter === ch.chapter
-                  ? 'bg-brand text-white'
-                  : 'bg-white border border-warm-border text-ink-sub'
-              }`}
-            >
-              {ch.chapter} {ch.count}
-            </button>
-          ))}
         </div>
 
         {photos.length === 0 ? (

@@ -74,12 +74,19 @@ export class GroupResponseDto {
   memberCount: number;
 
   @ApiProperty()
+  photoCount: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
 
-  static from(group: Group, memberCount?: number): GroupResponseDto {
+  static from(
+    group: Group,
+    memberCount?: number,
+    photoCount?: number,
+  ): GroupResponseDto {
     const dto = new GroupResponseDto();
     dto.id = group.id;
     dto.name = group.name;
@@ -92,6 +99,7 @@ export class GroupResponseDto {
     dto.uploadDeadline = group.uploadDeadline;
     dto.year = group.year;
     dto.memberCount = memberCount ?? group.members?.length ?? 0;
+    dto.photoCount = photoCount ?? 0;
     dto.createdAt = group.createdAt;
     dto.updatedAt = group.updatedAt;
     return dto;
@@ -102,10 +110,20 @@ export class GroupDetailResponseDto extends GroupResponseDto {
   @ApiProperty({ type: [GroupMemberResponseDto] })
   members: GroupMemberResponseDto[];
 
-  static fromDetail(group: Group): GroupDetailResponseDto {
+  @ApiProperty({ description: '얼굴 앵커 미등록 멤버 수' })
+  unregisteredFaceCount: number;
+
+  static fromDetail(
+    group: Group,
+    photoCount?: number,
+    unregisteredFaceCount?: number,
+  ): GroupDetailResponseDto {
     const dto = new GroupDetailResponseDto();
-    Object.assign(dto, GroupResponseDto.from(group));
-    dto.members = (group.members ?? []).map(GroupMemberResponseDto.from);
+    Object.assign(dto, GroupResponseDto.from(group, undefined, photoCount));
+    dto.members = (group.members ?? []).map((m) =>
+      GroupMemberResponseDto.from(m),
+    );
+    dto.unregisteredFaceCount = unregisteredFaceCount ?? 0;
     return dto;
   }
 }

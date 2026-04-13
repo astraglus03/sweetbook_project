@@ -64,6 +64,8 @@ export class OrderSyncCron {
       }
     }
 
-    this.logger.log(`Sync complete: ${updated}/${active.length} orders updated`);
+    this.logger.log(
+      `Sync complete: ${updated}/${active.length} orders updated`,
+    );
   }
 }

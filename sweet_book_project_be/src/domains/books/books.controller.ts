@@ -8,11 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BooksService } from './books.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -28,26 +24,24 @@ export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 
   @Get('specs')
-  @ApiOperation({ summary: '포토북 판형 목록 조회 (Sweetbook book-specs 프록시)' })
+  @ApiOperation({
+    summary: '포토북 판형 목록 조회 (Sweetbook book-specs 프록시)',
+  })
   getBookSpecs(@CurrentUser() _user: User) {
     return this.booksService.getBookSpecs();
   }
 
   @Get('specs/:uid/templates')
-  @ApiOperation({ summary: '판형별 템플릿 목록 조회 (Sweetbook templates 프록시)' })
-  getTemplates(
-    @CurrentUser() _user: User,
-    @Param('uid') uid: string,
-  ) {
+  @ApiOperation({
+    summary: '판형별 템플릿 목록 조회 (Sweetbook templates 프록시)',
+  })
+  getTemplates(@CurrentUser() _user: User, @Param('uid') uid: string) {
     return this.booksService.getTemplates(uid);
   }
 
   @Get('specs/:uid/themes')
   @ApiOperation({ summary: '판형별 사용 가능한 테마 목록 조회' })
-  getThemes(
-    @CurrentUser() _user: User,
-    @Param('uid') uid: string,
-  ) {
+  getThemes(@CurrentUser() _user: User, @Param('uid') uid: string) {
     return this.booksService.getThemes(uid);
   }
 
@@ -126,7 +120,9 @@ export class BooksController {
   }
 
   @Get(':bookId/available-templates')
-  @ApiOperation({ summary: '포토북 테마의 사용 가능한 내지 템플릿 목록 (레이아웃 포함)' })
+  @ApiOperation({
+    summary: '포토북 테마의 사용 가능한 내지 템플릿 목록 (레이아웃 포함)',
+  })
   getAvailableTemplates(
     @CurrentUser() _user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
