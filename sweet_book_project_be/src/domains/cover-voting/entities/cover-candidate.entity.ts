@@ -43,6 +43,14 @@ export class CoverCandidate {
   @Column({ type: 'varchar', length: 50 })
   bookSpecUid: string;
 
+  /** 후보 등록 시점의 templateName 스냅샷 (나중에 템플릿이 바뀌어도 보존) */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  templateName: string | null;
+
+  /** 후보 등록 시점의 theme 스냅샷 */
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  theme: string | null;
+
   /**
    * 슬롯별 파라미터: { [slotId: string]: photoId(number) | text(string) }
    * 사진 슬롯은 photoId(number), 텍스트 슬롯은 문자열 값으로 저장.

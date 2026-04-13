@@ -51,6 +51,8 @@ export class CoverVotingService {
       creatorUserId: userId,
       templateUid: dto.templateUid,
       bookSpecUid: dto.bookSpecUid,
+      templateName: dto.templateName ?? null,
+      theme: dto.theme ?? null,
       params: dto.params,
       // legacy columns — left null for new rows
       photoId: null,
@@ -195,6 +197,8 @@ export class CoverVotingService {
     dto.params = candidate.params ?? {};
     dto.templateUid = candidate.templateUid;
     dto.bookSpecUid = candidate.bookSpecUid;
+    dto.templateName = candidate.templateName ?? null;
+    dto.theme = candidate.theme ?? null;
     dto.voteCount = voteCount;
     dto.votedByMe = votedByMe;
     dto.createdAt = candidate.createdAt;

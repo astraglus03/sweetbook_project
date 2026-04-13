@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TemplateCanvas } from './TemplateCanvas';
+import { specLabel } from '../lib/bookLabels';
 
 /**
  * CoverComposer — 표지 구성 공용 컴포넌트
@@ -60,40 +61,49 @@ export function CoverComposer({
           <p className="text-sm font-medium text-ink mb-2">
             표지 템플릿 선택 <span className="text-red-500">*</span>
           </p>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {templateList.map((tpl) => {
               const thumbSrc = tpl.thumbnail || tpl.thumbnails?.layout || tpl.thumbnailUrl;
               const isSelected = (templateUid ?? resolvedTemplate?.templateUid) === tpl.templateUid;
+              const tplSpecLabel = tpl.bookSpecUid ? specLabel(tpl.bookSpecUid) : null;
+              const tplTheme = tpl.theme || null;
+              const cardLabel = [tplSpecLabel, tplTheme].filter(Boolean).join(' · ');
               return (
-                <button
-                  key={tpl.templateUid}
-                  type="button"
-                  onClick={() => handleTemplateSelect(tpl)}
-                  className={`relative rounded-lg overflow-hidden border-2 transition-colors focus:outline-none ${
-                    isSelected ? 'border-brand' : 'border-transparent hover:border-brand/40'
-                  }`}
-                  style={{ aspectRatio: '3/4' }}
-                >
-                  {thumbSrc ? (
-                    <img
-                      src={thumbSrc}
-                      alt={tpl.templateName ?? tpl.name ?? tpl.templateUid}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-warm-border flex items-center justify-center">
-                      <span className="text-[10px] text-ink/40 text-center px-1 leading-tight">
-                        {tpl.templateName ?? tpl.name ?? tpl.templateUid}
-                      </span>
-                    </div>
+                <div key={tpl.templateUid} className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleTemplateSelect(tpl)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-colors focus:outline-none ${
+                      isSelected ? 'border-brand' : 'border-transparent hover:border-brand/40'
+                    }`}
+                    style={{ aspectRatio: '3/4' }}
+                  >
+                    {thumbSrc ? (
+                      <img
+                        src={thumbSrc}
+                        alt={tpl.templateName ?? tpl.name ?? tpl.templateUid}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-warm-border flex items-center justify-center">
+                        <span className="text-[10px] text-ink/40 text-center px-1 leading-tight">
+                          {tpl.templateName ?? tpl.name ?? tpl.templateUid}
+                        </span>
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
+                        <span className="text-brand text-xl font-bold">✓</span>
+                      </div>
+                    )}
+                  </button>
+                  {cardLabel && (
+                    <p className="text-[10px] text-ink/50 text-center leading-tight truncate px-0.5">
+                      {cardLabel}
+                    </p>
                   )}
-                  {isSelected && (
-                    <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
-                      <span className="text-brand text-xl font-bold">✓</span>
-                    </div>
-                  )}
-                </button>
+                </div>
               );
             })}
           </div>

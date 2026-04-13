@@ -11,6 +11,7 @@ import {
 import { CoverPreview } from '../features/cover-voting/components/CoverPreview';
 import { CoverCandidateModal } from '../features/cover-voting/components/CoverCandidateModal';
 import { usePhotos } from '../features/photos/hooks/usePhotos';
+import { specLabel } from '../features/books/lib/bookLabels';
 
 export function CoverVotingPage() {
   const { groupId } = useParams();
@@ -153,8 +154,15 @@ export function CoverVotingPage() {
 
                   <div className="p-3">
                     <p className="text-xs text-ink/40 mt-1">
-                      {candidate.templateUid} · {candidate.creatorName}
+                      {specLabel(candidate.bookSpecUid)}
+                      {candidate.theme ? ` · ${candidate.theme}` : ''}
+                      {' · '}{candidate.creatorName}
                     </p>
+                    {candidate.templateName && (
+                      <p className="text-[11px] text-ink/30 mt-0.5 truncate">
+                        {candidate.templateName}
+                      </p>
+                    )}
 
                     <div className="flex items-center justify-between mt-3">
                       {/* 투표 버튼 */}
