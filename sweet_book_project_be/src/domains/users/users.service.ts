@@ -26,7 +26,10 @@ export class UsersService {
   async findByIdOrFail(id: number): Promise<User> {
     const user = await this.usersRepository.findById(id);
     if (!user) {
-      throw new NotFoundException('USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+      throw new NotFoundException(
+        'USER_NOT_FOUND',
+        '사용자를 찾을 수 없습니다',
+      );
     }
     return user;
   }
@@ -116,7 +119,10 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.usersRepository.findByIdWithPassword(userId);
     if (!user) {
-      throw new NotFoundException('USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+      throw new NotFoundException(
+        'USER_NOT_FOUND',
+        '사용자를 찾을 수 없습니다',
+      );
     }
     if (!user.passwordHash) {
       throw new ValidationException(

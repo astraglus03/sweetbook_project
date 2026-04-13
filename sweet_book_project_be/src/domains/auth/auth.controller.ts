@@ -119,7 +119,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('forgot-password')
   @ApiOperation({ summary: '비밀번호 재설정 요청 (이메일로 링크 전송)' })
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ sent: true }> {
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+  ): Promise<{ sent: true }> {
     await this.authService.forgotPassword(dto.email);
     return { sent: true };
   }
@@ -226,8 +228,7 @@ export class AuthController {
   }
 
   private baseCookieOptions(ttlSeconds: number): CookieOptions {
-    const isProd =
-      this.configService.get<string>('NODE_ENV') === 'production';
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
     return {
       httpOnly: true,
       secure: isProd,

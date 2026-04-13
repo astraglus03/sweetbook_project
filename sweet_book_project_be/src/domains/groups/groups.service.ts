@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
+import { Photo } from '../photos/entities/photo.entity';
+import { UserFaceAnchor } from '../photos/entities/user-face-anchor.entity';
 import {
   ConflictException,
   ForbiddenException,
@@ -20,6 +23,7 @@ import {
 import { Group } from './entities/group.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivitiesService } from '../activities/activities.service';
 
 const MAX_INVITE_CODE_RETRIES = 3;
 
@@ -32,7 +36,29 @@ export class GroupsService {
     private readonly groupMembersRepository: GroupMembersRepository,
     private readonly dataSource: DataSource,
     private readonly notificationsService: NotificationsService,
+    @InjectRepository(Photo)
+    private readonly photoRepository: Repository<Photo>,
+    @InjectRepository(UserFaceAnchor)
+    private readonly faceAnchorRepository: Repository<UserFaceAnchor>,
+    private readonly activitiesService: ActivitiesService,
   ) {}
+
+  private async countPhotosByGroupIds(
+    groupIds: number[],
+  ): Promise<Map<number, number>> {
+    const map = new Map<number, number>();
+    if (groupIds.length === 0) return map;
+    const rows = await this.photoRepository
+      .createQueryBuilder('p')
+      .select('p.groupId', 'groupId')
+      .addSelect('COUNT(p.id)', 'count')
+      .where({ groupId: In(groupIds) })
+      .groupBy('p.groupId')
+      .getRawMany<{ groupId: number; count: string }>();
+    for (const r of rows) map.set(Number(r.groupId), Number(r.count));
+    for (const id of groupIds) if (!map.has(id)) map.set(id, 0);
+    return map;
+  }
 
   async createGroup(
     userId: number,
@@ -76,9 +102,17 @@ export class GroupsService {
       query.search,
     );
 
+    const photoCounts = await this.countPhotosByGroupIds(
+      groups.map((g) => g.id),
+    );
+
     return {
       groups: groups.map((g) =>
-        GroupResponseDto.from(g, (g as Group & { memberCount: number }).memberCount),
+        GroupResponseDto.from(
+          g,
+          (g as Group & { memberCount: number }).memberCount,
+          photoCounts.get(g.id) ?? 0,
+        ),
       ),
       meta: {
         page,
@@ -95,10 +129,7 @@ export class GroupsService {
   ): Promise<GroupDetailResponseDto> {
     const group = await this.groupsRepository.findByIdWithMembers(groupId);
     if (!group) {
-      throw new NotFoundException(
-        'GROUP_NOT_FOUND',
-        '모임을 찾을 수 없습니다',
-      );
+      throw new NotFoundException('GROUP_NOT_FOUND', '모임을 찾을 수 없습니다');
     }
 
     const isMember = group.members.some((m) => m.userId === userId);
@@ -109,7 +140,22 @@ export class GroupsService {
       );
     }
 
-    return GroupDetailResponseDto.fromDetail(group);
+    const memberIds = group.members.map((m) => m.userId);
+    const [photoCounts, anchorCount] = await Promise.all([
+      this.countPhotosByGroupIds([group.id]),
+      memberIds.length > 0
+        ? this.faceAnchorRepository.count({
+            where: { groupId, userId: In(memberIds) },
+          })
+        : Promise.resolve(0),
+    ]);
+    const unregisteredFaceCount = group.members.length - anchorCount;
+
+    return GroupDetailResponseDto.fromDetail(
+      group,
+      photoCounts.get(group.id) ?? 0,
+      unregisteredFaceCount,
+    );
   }
 
   async updateGroup(
@@ -191,6 +237,12 @@ export class GroupsService {
     });
     await this.groupMembersRepository.save(member);
 
+    await this.activitiesService.record({
+      groupId,
+      actorUserId: userId,
+      type: 'MEMBER_JOINED',
+    });
+
     // 방장에게 새 멤버 참여 알림
     try {
       const owner = await this.groupMembersRepository.findByGroupAndUser(
@@ -207,7 +259,9 @@ export class GroupsService {
         });
       }
     } catch (notifyErr) {
-      this.logger.warn(`GROUP_INVITE notification failed: ${String(notifyErr)}`);
+      this.logger.warn(
+        `GROUP_INVITE notification failed: ${String(notifyErr)}`,
+      );
     }
 
     const memberCount = await this.groupMembersRepository.countByGroup(groupId);
@@ -264,10 +318,11 @@ export class GroupsService {
       );
     }
 
-    const newOwnerMembership = await this.groupMembersRepository.findByGroupAndUser(
-      groupId,
-      dto.newOwnerId,
-    );
+    const newOwnerMembership =
+      await this.groupMembersRepository.findByGroupAndUser(
+        groupId,
+        dto.newOwnerId,
+      );
     if (!newOwnerMembership) {
       throw new NotFoundException(
         'GROUP_MEMBER_NOT_FOUND',
@@ -303,10 +358,7 @@ export class GroupsService {
   private async findGroupOrFail(groupId: number): Promise<Group> {
     const group = await this.groupsRepository.findById(groupId);
     if (!group || group.status === 'DELETED') {
-      throw new NotFoundException(
-        'GROUP_NOT_FOUND',
-        '모임을 찾을 수 없습니다',
-      );
+      throw new NotFoundException('GROUP_NOT_FOUND', '모임을 찾을 수 없습니다');
     }
     return group;
   }

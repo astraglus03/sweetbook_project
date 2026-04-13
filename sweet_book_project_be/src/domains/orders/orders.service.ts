@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -15,6 +16,7 @@ import { GroupMember } from '../groups/entities/group-member.entity';
 import { SubmitShippingDto } from './dto/submit-shipping.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../../common/email/email.service';
+import { ActivitiesService } from '../activities/activities.service';
 
 @Injectable()
 export class OrdersService {
@@ -34,6 +36,7 @@ export class OrdersService {
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async remindPendingMembers(orderGroupId: number, userId: number) {
@@ -73,8 +76,8 @@ export class OrdersService {
     await Promise.all(
       pendingMembers.map((m) =>
         this.emailService.sendShippingReminder(
-          m.user!.email,
-          m.user!.name,
+          m.user.email,
+          m.user.name,
           book.title,
           orderLink,
         ),
@@ -112,11 +115,7 @@ export class OrdersService {
     return estimateData;
   }
 
-  async createOrderGroup(
-    bookId: number,
-    groupId: number,
-    userId: number,
-  ) {
+  async createOrderGroup(bookId: number, groupId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
 
     if (book.status !== 'READY') {
@@ -218,7 +217,7 @@ export class OrdersService {
       where: { orderGroupId, ordererId: userId },
     });
 
-    const timestamp = Date.now();
+    const idempotencyKey = `order-${randomUUID()}`;
     if (order) {
       order.recipientName = dto.recipientName;
       order.recipientPhone = dto.recipientPhone;
@@ -242,7 +241,7 @@ export class OrdersService {
         recipientAddressDetail: dto.recipientAddressDetail ?? null,
         memo: dto.memo ?? null,
         quantity: dto.quantity,
-        idempotencyKey: `order-${orderGroup.bookId}-${userId}-${timestamp}`,
+        idempotencyKey,
         status: 'PENDING',
       });
     }
@@ -306,8 +305,11 @@ export class OrdersService {
     }
 
     // 각 주문을 Sweetbook에 생성
-    const results: Array<{ orderId: number; success: boolean; error?: string }> =
-      [];
+    const results: Array<{
+      orderId: number;
+      success: boolean;
+      error?: string;
+    }> = [];
 
     for (const order of orders) {
       if (order.status !== 'PENDING') {
@@ -320,9 +322,7 @@ export class OrdersService {
         await this.orderRepository.save(order);
 
         const result = await this.sweetbookApiService.createOrder({
-          items: [
-            { bookUid: book.sweetbookBookUid!, quantity: order.quantity },
-          ],
+          items: [{ bookUid: book.sweetbookBookUid, quantity: order.quantity }],
           shipping: {
             recipientName: order.recipientName!,
             recipientPhone: order.recipientPhone!,
@@ -341,9 +341,7 @@ export class OrdersService {
         await this.orderRepository.save(order);
 
         results.push({ orderId: order.id, success: true });
-        this.logger.log(
-          `Order ${order.id} placed → ${result.orderUid}`,
-        );
+        this.logger.log(`Order ${order.id} placed → ${result.orderUid}`);
 
         // 주문자에게 결제 완료 알림
         try {
@@ -360,8 +358,7 @@ export class OrdersService {
           );
         }
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : String(err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
         order.status = 'ERROR';
         await this.orderRepository.save(order);
         results.push({
@@ -381,6 +378,13 @@ export class OrdersService {
 
       book.status = 'ORDERED';
       await this.bookRepository.save(book);
+
+      await this.activitiesService.record({
+        groupId: orderGroup.groupId,
+        actorUserId: userId,
+        type: 'ORDER_PLACED',
+        payload: { bookTitle: book.title, orderId: orderGroupId },
+      });
     }
 
     return { orderGroupId, results };
@@ -392,10 +396,7 @@ export class OrdersService {
       relations: ['orderGroup'],
     });
     if (!order) {
-      throw new NotFoundException(
-        'ORDER_NOT_FOUND',
-        '주문을 찾을 수 없습니다',
-      );
+      throw new NotFoundException('ORDER_NOT_FOUND', '주문을 찾을 수 없습니다');
     }
     if (order.ordererId !== userId) {
       throw new ForbiddenException(
@@ -429,10 +430,7 @@ export class OrdersService {
       where: { id: orderId },
     });
     if (!order) {
-      throw new NotFoundException(
-        'ORDER_NOT_FOUND',
-        '주문을 찾을 수 없습니다',
-      );
+      throw new NotFoundException('ORDER_NOT_FOUND', '주문을 찾을 수 없습니다');
     }
 
     // Sweetbook에서 최신 상태 동기화
@@ -494,12 +492,12 @@ export class OrdersService {
       order.status = 'REJECTED';
       order.memo = rejectReason ?? null;
     } else {
-      const timestamp = Date.now();
+      const rejectIdempotencyKey = `order-${randomUUID()}`;
       order = this.orderRepository.create({
         orderGroupId,
         ordererId: userId,
         status: 'REJECTED',
-        idempotencyKey: `reject-${orderGroup.bookId}-${userId}-${timestamp}`,
+        idempotencyKey: rejectIdempotencyKey,
         quantity: 0,
         recipientName: null,
         recipientPhone: null,
@@ -510,7 +508,9 @@ export class OrdersService {
     }
 
     const saved = await this.orderRepository.save(order);
-    this.logger.log(`Order rejected by user ${userId} for group ${orderGroupId}`);
+    this.logger.log(
+      `Order rejected by user ${userId} for group ${orderGroupId}`,
+    );
     return saved;
   }
 
@@ -548,9 +548,15 @@ export class OrdersService {
       };
     });
 
-    const submittedCount = memberStatuses.filter((m) => m.status === 'SUBMITTED').length;
-    const rejectedCount = memberStatuses.filter((m) => m.status === 'REJECTED').length;
-    const pendingCount = memberStatuses.filter((m) => m.status === 'PENDING').length;
+    const submittedCount = memberStatuses.filter(
+      (m) => m.status === 'SUBMITTED',
+    ).length;
+    const rejectedCount = memberStatuses.filter(
+      (m) => m.status === 'REJECTED',
+    ).length;
+    const pendingCount = memberStatuses.filter(
+      (m) => m.status === 'PENDING',
+    ).length;
 
     return {
       isCreator,
@@ -567,7 +573,10 @@ export class OrdersService {
   private async findBookOrFail(bookId: number): Promise<Book> {
     const book = await this.bookRepository.findOne({ where: { id: bookId } });
     if (!book) {
-      throw new NotFoundException('BOOK_NOT_FOUND', '포토북을 찾을 수 없습니다');
+      throw new NotFoundException(
+        'BOOK_NOT_FOUND',
+        '포토북을 찾을 수 없습니다',
+      );
     }
     return book;
   }
@@ -621,9 +630,7 @@ export class OrdersService {
     );
   }
 
-  private mapSweetbookStatus(
-    code: number | undefined,
-  ): Order['status'] | null {
+  private mapSweetbookStatus(code: number | undefined): Order['status'] | null {
     const map: Record<number, Order['status']> = {
       20: 'PAID',
       25: 'PDF_READY',

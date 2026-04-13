@@ -1,5 +1,10 @@
 import { plainToInstance } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, validateSync } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  validateSync,
+} from 'class-validator';
 
 class EnvVariables {
   @IsOptional()

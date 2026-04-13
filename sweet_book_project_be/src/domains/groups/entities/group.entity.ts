@@ -42,7 +42,14 @@ export class Group {
 
   @Column({
     type: 'enum',
-    enum: ['COLLECTING', 'EDITING', 'VOTING', 'ORDERED', 'COMPLETED', 'DELETED'],
+    enum: [
+      'COLLECTING',
+      'EDITING',
+      'VOTING',
+      'ORDERED',
+      'COMPLETED',
+      'DELETED',
+    ],
     default: 'COLLECTING',
   })
   status: GroupStatus;

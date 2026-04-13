@@ -135,7 +135,9 @@ export class WebhookRouterService {
       order.orderedAt = order.orderedAt ?? new Date();
       await this.orderRepository.save(order);
     }
-    this.logger.log(`order.created handled for order ${order.id} (test=${isTest})`);
+    this.logger.log(
+      `order.created handled for order ${order.id} (test=${isTest})`,
+    );
   }
 
   private async onOrderCancelled(
@@ -211,13 +213,19 @@ export class WebhookRouterService {
     }
   }
 
-  private async onProductionStarted(order: Order, _isTest: boolean): Promise<void> {
+  private async onProductionStarted(
+    order: Order,
+    _isTest: boolean,
+  ): Promise<void> {
     order.status = 'IN_PRODUCTION';
     await this.orderRepository.save(order);
     // 중간 단계 알림은 노이즈, 생략
   }
 
-  private async onProductionCompleted(order: Order, isTest: boolean): Promise<void> {
+  private async onProductionCompleted(
+    order: Order,
+    isTest: boolean,
+  ): Promise<void> {
     order.status = 'PRODUCTION_COMPLETE';
     await this.orderRepository.save(order);
     if (!isTest) {

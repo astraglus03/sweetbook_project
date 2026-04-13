@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useGroupDetail, useLeaveGroup } from '../features/groups/hooks/useGroups';
+import {
+  useGroupDetail,
+  useLeaveGroup,
+  useUpdateGroupStatus,
+  useFaceDetectionStatus,
+} from '../features/groups/hooks/useGroups';
 import { useMe } from '../features/auth/hooks/useAuth';
 import { MemberList } from '../features/groups/components/MemberList';
 import { GroupSettings } from '../features/groups/components/GroupSettings';
@@ -10,13 +15,14 @@ import { GroupOrdersTab } from '../features/orders/components/GroupOrdersTab';
 import { GroupBooksTab } from '../features/books/components/GroupBooksTab';
 import { InviteModal } from '../features/groups/components/InviteModal';
 import { KakaoImportModal } from '../features/kakao-import/components/KakaoImportModal';
-import { KakaoMappingModal } from '../features/kakao-import/components/KakaoMappingModal';
+import { ActivityList } from '../features/activities/components/ActivityList';
 
 const TABS = [
   { key: 'photos', label: '사진' },
   { key: 'members', label: '멤버' },
   { key: 'books', label: '포토북' },
   { key: 'orders', label: '주문' },
+  { key: 'activity', label: '활동' },
 ];
 
 const STATUS_LABELS = {
@@ -27,21 +33,45 @@ const STATUS_LABELS = {
   COMPLETED: '배송 완료',
 };
 
+const NEXT_STATUS = {
+  COLLECTING: { to: 'EDITING', label: '편집 시작' },
+  EDITING: { to: 'VOTING', label: '투표 시작' },
+  VOTING: { to: 'ORDERED', label: '주문 확정' },
+  ORDERED: { to: 'COMPLETED', label: '배송 완료 처리' },
+};
+
 export function GroupDetailPage() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { data: group, isLoading, isError } = useGroupDetail(Number(groupId));
   const { data: me } = useMe();
   const leaveGroup = useLeaveGroup();
+  const updateStatus = useUpdateGroupStatus(Number(groupId));
+  const { data: faceStatus } = useFaceDetectionStatus(Number(groupId));
   const [activeTab, setActiveTab] = useState('photos');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isKakaoOpen, setIsKakaoOpen] = useState(false);
-  const [kakaoResult, setKakaoResult] = useState(null);
+  const [kakaoToast, setKakaoToast] = useState(null); // { count: number }
+  const kakaoToastTimerRef = useRef(null);
   const [shareCopied, setShareCopied] = useState(false);
 
   const isOwner = me && group && me.id === group.ownerId;
+
+  const handleKakaoImportComplete = (result) => {
+    setIsKakaoOpen(false);
+    const count = result?.totalPhotos ?? result?.savedPhotos ?? 0;
+    setKakaoToast({ count });
+    if (kakaoToastTimerRef.current) clearTimeout(kakaoToastTimerRef.current);
+    kakaoToastTimerRef.current = setTimeout(() => setKakaoToast(null), 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (kakaoToastTimerRef.current) clearTimeout(kakaoToastTimerRef.current);
+    };
+  }, []);
 
   const handleLeave = () => {
     if (!window.confirm('이 모임을 나가시겠습니까?')) return;
@@ -136,10 +166,34 @@ export function GroupDetailPage() {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            {/* Status badge */}
-            <span className="inline-flex px-2.5 py-0.5 bg-brand/25 text-brand text-xs font-medium rounded-full mb-2">
-              {STATUS_LABELS[group.status] ?? group.status}
-            </span>
+            {/* Status badge + transition button */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex px-2.5 py-0.5 bg-brand/25 text-brand text-xs font-medium rounded-full">
+                {STATUS_LABELS[group.status] ?? group.status}
+              </span>
+              {isOwner && NEXT_STATUS[group.status] && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = NEXT_STATUS[group.status];
+                    if (!confirm(`${next.label}? 다음 단계로 진행해요`)) return;
+                    updateStatus.mutate(next.to);
+                  }}
+                  disabled={updateStatus.isPending}
+                  className="inline-flex px-2.5 py-0.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-full disabled:opacity-50"
+                >
+                  {updateStatus.isPending
+                    ? '...'
+                    : `→ ${NEXT_STATUS[group.status].label}`}
+                </button>
+              )}
+              {faceStatus?.inProgress && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-500/20 text-blue-200 text-xs font-medium rounded-full">
+                  <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-pulse" />
+                  얼굴 감지 중 {faceStatus.queue.waiting + faceStatus.queue.active}장
+                </span>
+              )}
+            </div>
 
             <h1 className="text-lg lg:text-2xl font-bold text-white truncate">
               {group.name}
@@ -163,27 +217,22 @@ export function GroupDetailPage() {
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Invite (primary action) */}
+          {/* Action buttons — desktop: inline top-right */}
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             <button type="button" onClick={() => setIsInviteOpen(true)}
               className="h-9 px-4 rounded-full bg-brand hover:bg-brand-hover transition-colors text-white text-xs font-semibold flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
-              <span className="hidden sm:inline">초대</span>
+              초대
             </button>
-
-            {/* Upload */}
             <button type="button" onClick={() => setIsUploadOpen(true)}
-              className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
-              title="사진 업로드">
+              className="h-9 px-4 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white text-xs font-semibold flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
+              업로드
             </button>
-
-            {/* Settings gear (owner only) */}
             {isOwner && (
               <button type="button" onClick={() => setIsSettingsOpen((v) => !v)}
                 className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors text-white ${isSettingsOpen ? 'bg-white/25' : 'bg-white/10 hover:bg-white/20'}`}
@@ -194,8 +243,6 @@ export function GroupDetailPage() {
                 </svg>
               </button>
             )}
-
-            {/* Leave (non-owner) */}
             {!isOwner && (
               <button type="button" onClick={handleLeave} disabled={leaveGroup.isPending}
                 className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-red-500/30 transition-colors text-white/60 hover:text-red-200 disabled:opacity-50"
@@ -206,6 +253,43 @@ export function GroupDetailPage() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Action buttons — mobile/tablet: dedicated row below info, full-width primary */}
+        <div className="lg:hidden mt-4 flex items-stretch gap-2">
+          <button type="button" onClick={() => setIsInviteOpen(true)}
+            className="flex-1 h-11 rounded-full bg-brand hover:bg-brand-hover transition-colors text-white text-sm font-semibold flex items-center justify-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            초대하기
+          </button>
+          <button type="button" onClick={() => setIsUploadOpen(true)}
+            className="flex-1 h-11 rounded-full bg-white/15 hover:bg-white/25 transition-colors text-white text-sm font-semibold flex items-center justify-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            업로드
+          </button>
+          {isOwner && (
+            <button type="button" onClick={() => setIsSettingsOpen((v) => !v)}
+              className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors text-white flex-shrink-0 ${isSettingsOpen ? 'bg-white/25' : 'bg-white/15 hover:bg-white/25'}`}
+              title="모임 설정">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
+          {!isOwner && (
+            <button type="button" onClick={handleLeave} disabled={leaveGroup.isPending}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/15 hover:bg-red-500/30 transition-colors text-white/70 hover:text-red-200 disabled:opacity-50 flex-shrink-0"
+              title="모임 나가기">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -279,10 +363,31 @@ export function GroupDetailPage() {
           />
         )}
         {activeTab === 'books' && (
-          <GroupBooksTab groupId={Number(groupId)} navigate={navigate} />
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-brand/10 to-brand/5 border border-brand/30 rounded-xl p-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-ink flex items-center gap-1">
+                  ✨ 개인 포토북 (Personal Book)
+                </p>
+                <p className="text-sm text-ink/70 mt-1">
+                  얼굴 인식으로 당신이 주인공인 포토북을 자동 생성해요
+                </p>
+              </div>
+              <button
+                onClick={() => navigate(`/groups/${groupId}/books/personal`)}
+                className="bg-brand text-white rounded-xl px-4 py-2 font-semibold whitespace-nowrap hover:opacity-90"
+              >
+                만들기 →
+              </button>
+            </div>
+            <GroupBooksTab groupId={Number(groupId)} navigate={navigate} />
+          </div>
         )}
         {activeTab === 'orders' && (
           <GroupOrdersTab groupId={Number(groupId)} navigate={navigate} />
+        )}
+        {activeTab === 'activity' && (
+          <ActivityList groupId={Number(groupId)} />
         )}
       </div>
 
@@ -293,21 +398,23 @@ export function GroupDetailPage() {
         onClose={() => setIsUploadOpen(false)}
       />
 
-      {isKakaoOpen && !kakaoResult && (
+      {isKakaoOpen && (
         <KakaoImportModal
           groupId={Number(groupId)}
           onClose={() => setIsKakaoOpen(false)}
-          onImportComplete={(result) => setKakaoResult(result)}
+          onImportComplete={handleKakaoImportComplete}
         />
       )}
 
-      {kakaoResult && (
-        <KakaoMappingModal
-          groupId={Number(groupId)}
-          result={kakaoResult}
-          members={group.members ?? []}
-          onClose={() => { setKakaoResult(null); setIsKakaoOpen(false); }}
-        />
+      {kakaoToast && (
+        <div className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-ink text-white text-sm font-medium px-5 py-3 rounded-full shadow-lg flex items-center gap-2 animate-fade-in">
+            <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+            {kakaoToast.count}장 가져왔어요
+          </div>
+        </div>
       )}
     </div>
   );

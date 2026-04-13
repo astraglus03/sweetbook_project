@@ -57,7 +57,9 @@ export class EmailService {
         subject,
         html,
       });
-      this.logger.log(`Password reset email sent to ${to} (messageId=${info.messageId})`);
+      this.logger.log(
+        `Password reset email sent to ${to} (messageId=${info.messageId})`,
+      );
     } catch (error: unknown) {
       this.logger.error(
         `Failed to send reset email to ${to}: ${error instanceof Error ? error.message : error}`,
@@ -94,6 +96,52 @@ export class EmailService {
     } catch (error: unknown) {
       this.logger.error(
         `Failed to send reminder email to ${to}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
+  async sendUploadReminder(
+    to: string,
+    name: string,
+    groupName: string,
+    daysLeft: number,
+    groupLink: string,
+  ): Promise<void> {
+    const subject = `[GroupBook] "${groupName}" 사진 업로드 마감까지 ${daysLeft}일 남았어요`;
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F8F5F0;font-family:'Inter',sans-serif;">
+  <div style="max-width:480px;margin:40px auto;background:#FFFFFF;border-radius:16px;border:1px solid #E5E0D8;overflow:hidden;">
+    <div style="background:#1A1A1A;padding:32px 40px;text-align:center;">
+      <span style="color:#D4916E;font-size:20px;font-weight:700;">GroupBook</span>
+    </div>
+    <div style="padding:40px;">
+      <h2 style="margin:0 0 8px;font-size:20px;color:#1A1A1A;">${name}님, 사진을 업로드해주세요</h2>
+      <p style="margin:0 0 24px;font-size:14px;color:#6B6B6B;line-height:1.6;">
+        "${groupName}" 모임의 사진 업로드 마감까지 <strong>${daysLeft}일</strong> 남았습니다.
+      </p>
+      <a href="${groupLink}" style="display:inline-block;padding:14px 28px;background:#D4916E;color:#FFFFFF;border-radius:8px;text-decoration:none;font-weight:600;">
+        사진 업로드하기
+      </a>
+    </div>
+  </div>
+</body></html>`;
+
+    if (!this.transporter) {
+      this.logger.log(`[DEV EMAIL] Upload reminder to: ${to}`);
+      return;
+    }
+
+    try {
+      await this.transporter.sendMail({
+        from: this.fromAddress,
+        to,
+        subject,
+        html,
+      });
+      this.logger.log(`Upload reminder sent to ${to}`);
+    } catch (error: unknown) {
+      this.logger.error(
+        `Failed to send upload reminder to ${to}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

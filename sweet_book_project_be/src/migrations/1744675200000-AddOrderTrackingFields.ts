@@ -24,8 +24,12 @@ export class AddOrderTrackingFields1744675200000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "deliveredAt"`);
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "shippedAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "expectedPrintDate"`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN "expectedPrintDate"`,
+    );
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "carrierCode"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "trackingNumber"`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN "trackingNumber"`,
+    );
   }
 }

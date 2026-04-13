@@ -30,7 +30,9 @@ export class BookResponseDto {
   @ApiPropertyOptional()
   theme: string | null;
 
-  @ApiProperty({ enum: ['DRAFT', 'UPLOADING', 'PROCESSING', 'READY', 'ORDERED', 'FAILED'] })
+  @ApiProperty({
+    enum: ['DRAFT', 'UPLOADING', 'PROCESSING', 'READY', 'ORDERED', 'FAILED'],
+  })
   status: BookStatus;
 
   @ApiPropertyOptional()

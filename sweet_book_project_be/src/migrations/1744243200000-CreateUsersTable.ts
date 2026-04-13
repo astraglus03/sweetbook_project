@@ -27,7 +27,9 @@ export class CreateUsersTable1744243200000 implements MigrationInterface {
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_users_provider_lookup";`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_users_provider_lookup";`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_users_email";`);
     await queryRunner.query(`DROP TABLE IF EXISTS "users";`);
   }

@@ -472,8 +472,30 @@ export function BookEditorPage() {
     );
   }
 
+  const isPersonal = book?.bookType === 'PERSONAL';
+
   return (
     <div className="h-screen bg-warm-bg flex flex-col overflow-hidden">
+      {isPersonal && (
+        <div className="bg-gradient-to-r from-brand/20 to-brand/10 border-b border-brand/30 px-4 py-2 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2 text-xs text-ink">
+            <span className="font-semibold">✨ 개인 포토북</span>
+            <span className="text-ink/60">
+              얼굴 인식으로 자동 생성된 당신만의 포토북
+            </span>
+          </div>
+          <button
+            onClick={() =>
+              navigate(
+                `/groups/${book.groupId}/books/personal/${numBookId}/review`,
+              )
+            }
+            className="text-xs text-brand font-semibold hover:underline whitespace-nowrap"
+          >
+            사진 검수 →
+          </button>
+        </div>
+      )}
       {/* Search Modal */}
       {showPreviewModal && (
         <BookPreviewModal

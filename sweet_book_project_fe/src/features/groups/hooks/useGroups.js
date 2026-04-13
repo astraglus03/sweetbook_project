@@ -71,6 +71,34 @@ export function useUpdateGroup() {
   });
 }
 
+export function useUpdateGroupStatus(groupId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (status) => {
+      const res = await groupsApi.updateStatus(groupId, status);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: GROUPS_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: groupDetailKey(groupId) });
+    },
+  });
+}
+
+export function useFaceDetectionStatus(groupId) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'face-detection-status'],
+    queryFn: async () => {
+      const res = await groupsApi.getFaceDetectionStatus(groupId);
+      return res.data;
+    },
+    enabled: !!groupId,
+    refetchInterval: (query) =>
+      query.state.data?.inProgress ? 3000 : false,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useDeleteGroup() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -19,6 +19,7 @@ import { OrdersModule } from './domains/orders/orders.module';
 import { NotificationsModule } from './domains/notifications/notifications.module';
 import { KakaoImportModule } from './domains/kakao-import/kakao-import.module';
 import { WebhooksModule } from './domains/webhooks/webhooks.module';
+import { ActivitiesModule } from './domains/activities/activities.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
 
@@ -45,6 +46,7 @@ import { OpenAiModule } from './external/openai/openai.module';
     NotificationsModule,
     KakaoImportModule,
     WebhooksModule,
+    ActivitiesModule,
     SweetbookModule,
     OpenAiModule,
   ],

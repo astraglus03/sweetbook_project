@@ -7,11 +7,13 @@ import { GroupMember } from '../groups/entities/group-member.entity';
 import { BooksController } from './books.controller';
 import { BooksService } from './books.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Book, BookPage, Photo, GroupMember]),
     NotificationsModule,
+    ActivitiesModule,
   ],
   controllers: [BooksController],
   providers: [BooksService],

@@ -59,8 +59,11 @@ export class AuthService {
     if (!user.passwordHash) {
       // 소셜 전용 계정 — 비밀번호 로그인 불가
       const providerName =
-        user.provider === 'google' ? 'Google' :
-        user.provider === 'kakao' ? '카카오' : user.provider;
+        user.provider === 'google'
+          ? 'Google'
+          : user.provider === 'kakao'
+            ? '카카오'
+            : user.provider;
       throw new UnauthorizedException(
         'AUTH_SOCIAL_ONLY',
         `이 계정은 ${providerName} 소셜 로그인으로 가입되었습니다. ${providerName}로 로그인해주세요.`,
@@ -108,7 +111,12 @@ export class AuthService {
       return;
     }
     const token = crypto.randomBytes(32).toString('hex');
-    await this.redis.set(`${RESET_PREFIX}${token}`, String(user.id), 'EX', RESET_TTL);
+    await this.redis.set(
+      `${RESET_PREFIX}${token}`,
+      String(user.id),
+      'EX',
+      RESET_TTL,
+    );
     const feUrl = this.configService.get<string>(
       'CORS_ORIGIN',
       'http://localhost:5173',

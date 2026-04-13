@@ -1,15 +1,56 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useKakaoImport } from '../hooks/useKakaoImport';
 
 const MAX_SIZE = 100 * 1024 * 1024;
+
+const STEPS = [
+  { key: 'idle', label: '대기' },
+  { key: 'uploading', label: '업로드' },
+  { key: 'processing', label: '분석' },
+  { key: 'done', label: '완료' },
+];
+
+function StepIndicator({ stage }) {
+  const activeIdx = STEPS.findIndex((s) => s.key === stage);
+  return (
+    <div className="flex items-center gap-1.5 justify-center mb-6">
+      {STEPS.map((step, idx) => (
+        <div key={step.key} className="flex items-center gap-1.5">
+          <span
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+              idx === activeIdx
+                ? 'bg-brand text-white'
+                : idx < activeIdx
+                  ? 'bg-brand/20 text-brand'
+                  : 'bg-warm-bg text-ink-muted'
+            }`}
+          >
+            {step.label}
+          </span>
+          {idx < STEPS.length - 1 && (
+            <span className={`text-[10px] ${idx < activeIdx ? 'text-brand' : 'text-ink-muted'}`}>›</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState('idle'); // idle | uploading | processing
+  const [stage, setStage] = useState('idle'); // idle | uploading | processing | done
+  const [doneCount, setDoneCount] = useState(0);
   const inputRef = useRef(null);
+  const doneTimerRef = useRef(null);
   const importMutation = useKakaoImport(groupId);
+
+  useEffect(() => {
+    return () => {
+      if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+    };
+  }, []);
 
   const handleFile = (file) => {
     if (!file) return;
@@ -46,8 +87,12 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
       },
       {
         onSuccess: (result) => {
-          setStage('idle');
-          onImportComplete(result);
+          const count = result?.totalPhotos ?? result?.savedPhotos ?? 0;
+          setDoneCount(count);
+          setStage('done');
+          doneTimerRef.current = setTimeout(() => {
+            onImportComplete(result);
+          }, 1200);
         },
         onError: (err) => {
           setStage('idle');
@@ -58,20 +103,29 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
     );
   };
 
-  const isWorking = stage !== 'idle';
+  const isWorking = stage === 'uploading' || stage === 'processing';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-      onClick={() => !isWorking && onClose()}>
-      <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+      onClick={() => !isWorking && stage !== 'done' && onClose()}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
         <div className="p-6 border-b border-warm-border flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-ink">카카오톡에서 사진 가져오기</h2>
+            <h2 className="font-display text-xl font-bold text-ink">카카오톡에서 사진 가져오기</h2>
             <p className="text-xs text-ink-sub mt-1">단톡방 대화 내보내기 zip을 올리면 사진을 한 번에 가져와요</p>
           </div>
-          {!isWorking && (
-            <button type="button" onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-warm-bg text-ink-sub">
+          {!isWorking && stage !== 'done' && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-warm-bg text-ink-sub flex-shrink-0 ml-3"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -79,8 +133,11 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
           )}
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* 안내 */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Step indicator */}
+          <StepIndicator stage={stage} />
+
+          {/* iOS guidance banner */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900">
             <p className="font-semibold mb-1">📱 안드로이드 카톡 앱에서 내보내기</p>
             <p className="leading-relaxed">
@@ -91,24 +148,24 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
             </p>
           </div>
 
-          {/* 드롭존 */}
+          {/* Drop zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              if (isWorking) return;
+              if (isWorking || stage === 'done') return;
               const file = e.dataTransfer.files[0];
               if (file) handleFile(file);
             }}
-            onClick={() => !isWorking && inputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-              isWorking
-                ? 'border-warm-border bg-warm-bg/40 cursor-wait'
+            onClick={() => !isWorking && stage !== 'done' && inputRef.current?.click()}
+            className={`min-h-[240px] border-2 border-dashed rounded-2xl p-12 text-center flex flex-col items-center justify-center transition-colors ${
+              isWorking || stage === 'done'
+                ? 'border-warm-border bg-warm-bg/40 cursor-default'
                 : dragOver
-                  ? 'border-brand bg-brand/5'
-                  : 'border-warm-border hover:border-brand hover:bg-brand/5'
+                  ? 'border-brand bg-brand/5 cursor-pointer'
+                  : 'border-warm-border hover:border-brand hover:bg-brand/5 cursor-pointer'
             }`}
           >
             <input
@@ -125,8 +182,8 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
 
             {stage === 'idle' && (
               <>
-                <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-warm-bg flex items-center justify-center text-ink-muted">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand/10 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                 </div>
@@ -138,9 +195,9 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
             )}
 
             {stage === 'uploading' && (
-              <div className="space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
-                  <div className="animate-spin w-7 h-7 border-2 border-brand border-t-transparent rounded-full" />
+              <div className="w-full space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink mb-2">업로드 중… {progress}%</p>
@@ -153,11 +210,23 @@ export function KakaoImportModal({ groupId, onClose, onImportComplete }) {
 
             {stage === 'processing' && (
               <div className="space-y-2">
-                <div className="w-14 h-14 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
-                  <div className="animate-spin w-7 h-7 border-2 border-brand border-t-transparent rounded-full" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-brand/10 flex items-center justify-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
                 </div>
                 <p className="text-sm font-semibold text-ink">사진 분석 중…</p>
                 <p className="text-xs text-ink-muted">잠시만 기다려주세요 (30초~1분)</p>
+              </div>
+            )}
+
+            {stage === 'done' && (
+              <div className="space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-500 flex items-center justify-center">
+                  <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-ink">{doneCount}장 가져왔어요</p>
+                <p className="text-xs text-ink-muted">갤러리에서 확인하세요</p>
               </div>
             )}
           </div>

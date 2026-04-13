@@ -14,7 +14,10 @@ import type { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { WebhookVerifierService } from './webhook-verifier.service';
 import { WebhookDedupService } from './webhook-dedup.service';
-import { WebhookRouterService, SweetbookEventPayload } from './webhook-router.service';
+import {
+  WebhookRouterService,
+  SweetbookEventPayload,
+} from './webhook-router.service';
 
 @ApiTags('webhooks')
 @Controller('webhooks')

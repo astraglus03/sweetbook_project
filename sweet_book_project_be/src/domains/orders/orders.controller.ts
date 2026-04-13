@@ -115,7 +115,11 @@ export class OrdersController {
     @Param('orderGroupId', ParseIntPipe) orderGroupId: number,
     @Body() dto: RejectOrderDto,
   ) {
-    return this.ordersService.rejectOrder(orderGroupId, user.id, dto.rejectReason);
+    return this.ordersService.rejectOrder(
+      orderGroupId,
+      user.id,
+      dto.rejectReason,
+    );
   }
 
   @Get('groups/:orderGroupId/members-status')

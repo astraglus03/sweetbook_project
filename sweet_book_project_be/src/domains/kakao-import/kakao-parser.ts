@@ -2,7 +2,8 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('KakaoParser');
 
-const MESSAGE_REGEX = /^(오전|오후)\s(\d+):(\d+),\s([^:]+)\s:\s(사진|동영상|이모티콘|.+)$/;
+const MESSAGE_REGEX =
+  /^(오전|오후)\s(\d+):(\d+),\s([^:]+)\s:\s(사진|동영상|이모티콘|.+)$/;
 const DATE_HEADER_REGEX = /^-+\s(\d{4})년\s(\d+)월\s(\d+)일\s.+?\s-+$/;
 
 export interface ParsedPhotoMessage {
@@ -22,11 +23,7 @@ export function parseKakaoTxt(content: string): ParsedPhotoMessage[] {
 
     const dateMatch = line.match(DATE_HEADER_REGEX);
     if (dateMatch) {
-      currentDate = new Date(
-        +dateMatch[1],
-        +dateMatch[2] - 1,
-        +dateMatch[3],
-      );
+      currentDate = new Date(+dateMatch[1], +dateMatch[2] - 1, +dateMatch[3]);
       continue;
     }
 

@@ -14,6 +14,7 @@ import {
   ForbiddenException,
   ValidationException,
 } from '../../common/exceptions';
+import { ActivitiesService } from '../activities/activities.service';
 
 const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'photos');
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -28,6 +29,7 @@ export class PhotosService {
     @InjectRepository(Photo)
     private readonly photoRepository: Repository<Photo>,
     private readonly configService: ConfigService,
+    private readonly activitiesService: ActivitiesService,
   ) {
     this.baseUrl = this.configService.get<string>(
       'BASE_URL',
@@ -62,13 +64,23 @@ export class PhotosService {
       results.push(PhotoResponseDto.from(photo, this.baseUrl));
     }
 
+    await this.activitiesService.record({
+      groupId,
+      actorUserId: uploaderId,
+      type: 'PHOTO_UPLOADED',
+      payload: { count: results.length },
+    });
+
     return results;
   }
 
   async getPhotos(
     groupId: number,
     query: PhotoListQueryDto,
-  ): Promise<{ photos: PhotoResponseDto[]; meta: { page: number; limit: number; total: number; totalPages: number } }> {
+  ): Promise<{
+    photos: PhotoResponseDto[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -157,7 +169,9 @@ export class PhotosService {
     await this.photoRepository.remove(photo);
   }
 
-  async getChapters(groupId: number): Promise<{ chapter: string; count: number }[]> {
+  async getChapters(
+    groupId: number,
+  ): Promise<{ chapter: string; count: number }[]> {
     const result = await this.photoRepository
       .createQueryBuilder('photo')
       .select('photo.chapter', 'chapter')
@@ -224,10 +238,7 @@ export class PhotosService {
     return saved;
   }
 
-  private async deleteFiles(
-    groupId: number,
-    filename: string,
-  ): Promise<void> {
+  private async deleteFiles(groupId: number, filename: string): Promise<void> {
     const groupDir = path.join(UPLOAD_BASE, String(groupId));
     const variants = ['original', 'medium', 'thumbnail'];
     await Promise.all(

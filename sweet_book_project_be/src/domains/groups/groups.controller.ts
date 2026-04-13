@@ -50,10 +50,7 @@ export class GroupsController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({ summary: '내 모임 목록' })
-  getMyGroups(
-    @CurrentUser() user: User,
-    @Query() query: GroupListQueryDto,
-  ) {
+  getMyGroups(@CurrentUser() user: User, @Query() query: GroupListQueryDto) {
     return this.groupsService.getMyGroups(user.id, query);
   }
 

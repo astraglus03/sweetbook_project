@@ -16,7 +16,10 @@ export class NotificationsService {
   async getNotifications(
     userId: number,
     query: NotificationListQueryDto,
-  ): Promise<{ notifications: NotificationResponseDto[]; meta: Record<string, number> }> {
+  ): Promise<{
+    notifications: NotificationResponseDto[];
+    meta: Record<string, number>;
+  }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
@@ -53,7 +56,10 @@ export class NotificationsService {
     return { count };
   }
 
-  async markAsRead(notificationId: number, userId: number): Promise<NotificationResponseDto> {
+  async markAsRead(
+    notificationId: number,
+    userId: number,
+  ): Promise<NotificationResponseDto> {
     const notification = await this.notificationRepository.findOne({
       where: { id: notificationId },
       relations: ['group'],

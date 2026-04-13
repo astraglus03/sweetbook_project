@@ -68,7 +68,8 @@ export class SweetbookApiService {
 
   private isRetryable(error: unknown): boolean {
     if (!axios.isAxiosError(error)) return false;
-    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return true;
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')
+      return true;
     const status = error.response?.status;
     if (status === undefined) return true; // network error
     if (status === 429) return true;
@@ -107,7 +108,9 @@ export class SweetbookApiService {
   }
 
   async getBookSpec(bookSpecUid: string): Promise<unknown> {
-    this.logger.log(`GET /book-specs/${bookSpecUid} [apiKey=${this.maskedKey}]`);
+    this.logger.log(
+      `GET /book-specs/${bookSpecUid} [apiKey=${this.maskedKey}]`,
+    );
     try {
       const response = await this.client.get(`/book-specs/${bookSpecUid}`);
       const body = response.data;
@@ -139,9 +142,7 @@ export class SweetbookApiService {
         : Array.isArray(data?.templates)
           ? data.templates
           : [];
-      this.logger.log(
-        `Templates for ${bookSpecUid}: ${list.length} items`,
-      );
+      this.logger.log(`Templates for ${bookSpecUid}: ${list.length} items`);
       return list;
     } catch (error) {
       const { message, details } = this.extractError(error);
@@ -154,9 +155,7 @@ export class SweetbookApiService {
   }
 
   async getTemplateDetail(templateUid: string): Promise<unknown> {
-    this.logger.log(
-      `GET /templates/${templateUid} [apiKey=${this.maskedKey}]`,
-    );
+    this.logger.log(`GET /templates/${templateUid} [apiKey=${this.maskedKey}]`);
     try {
       const response = await this.client.get(`/templates/${templateUid}`);
       const body = response.data;
@@ -205,9 +204,7 @@ export class SweetbookApiService {
     fileBuffer: Buffer,
     fileName: string,
   ): Promise<{ fileName: string }> {
-    this.logger.log(
-      `POST /books/${bookUid}/photos [apiKey=${this.maskedKey}]`,
-    );
+    this.logger.log(`POST /books/${bookUid}/photos [apiKey=${this.maskedKey}]`);
     try {
       const form = new FormData();
       form.append('file', fileBuffer, { filename: fileName });
@@ -273,7 +270,9 @@ export class SweetbookApiService {
       if (params.parameters && Object.keys(params.parameters).length > 0) {
         form.append('parameters', JSON.stringify(params.parameters));
       }
-      const query = params.breakBefore ? `?breakBefore=${params.breakBefore}` : '';
+      const query = params.breakBefore
+        ? `?breakBefore=${params.breakBefore}`
+        : '';
       await this.client.post(`/books/${bookUid}/contents${query}`, form, {
         headers: { ...form.getHeaders() },
       });
@@ -309,10 +308,7 @@ export class SweetbookApiService {
       await this.client.delete(`/books/${bookUid}`);
     } catch (error) {
       const { message, details } = this.extractError(error);
-      this.logger.error(
-        `DELETE /books/${bookUid} failed: ${message}`,
-        details,
-      );
+      this.logger.error(`DELETE /books/${bookUid} failed: ${message}`, details);
       throw new ExternalApiException('SWEETBOOK_API_ERROR', message);
     }
   }
@@ -325,10 +321,7 @@ export class SweetbookApiService {
       return body.data ?? body;
     } catch (error) {
       const { message, details } = this.extractError(error);
-      this.logger.error(
-        `GET /books/${bookUid} failed: ${message}`,
-        details,
-      );
+      this.logger.error(`GET /books/${bookUid} failed: ${message}`, details);
       throw new ExternalApiException('SWEETBOOK_API_ERROR', message);
     }
   }
@@ -422,19 +415,15 @@ export class SweetbookApiService {
       return body.data ?? body;
     } catch (error) {
       const { message, details } = this.extractError(error);
-      this.logger.error(
-        `GET /orders/${orderUid} failed: ${message}`,
-        details,
-      );
+      this.logger.error(`GET /orders/${orderUid} failed: ${message}`, details);
       throw new ExternalApiException('SWEETBOOK_API_ERROR', message);
     }
   }
 
-  async cancelOrder(
-    orderUid: string,
-    cancelReason: string,
-  ): Promise<void> {
-    this.logger.log(`POST /orders/${orderUid}/cancel [apiKey=${this.maskedKey}]`);
+  async cancelOrder(orderUid: string, cancelReason: string): Promise<void> {
+    this.logger.log(
+      `POST /orders/${orderUid}/cancel [apiKey=${this.maskedKey}]`,
+    );
     try {
       await this.client.post(`/orders/${orderUid}/cancel`, { cancelReason });
     } catch (error) {
@@ -469,9 +458,7 @@ export class SweetbookApiService {
   // ─── Sandbox Credits ───────────────────────────────────────
 
   async sandboxCharge(amount: number): Promise<unknown> {
-    this.logger.log(
-      `POST /credits/sandbox/charge [apiKey=${this.maskedKey}]`,
-    );
+    this.logger.log(`POST /credits/sandbox/charge [apiKey=${this.maskedKey}]`);
     try {
       const response = await this.client.post('/credits/sandbox/charge', {
         amount,
