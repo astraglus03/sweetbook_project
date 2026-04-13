@@ -31,15 +31,12 @@ export class AddCoverVoting1776133165000 implements MigrationInterface {
       ON "cover_candidates" ("groupId")
     `);
 
+    // NOTE: UNIQUE INDEX로 대체 — 이전 실행에서 동명 인덱스가 이미 있을 수 있어
+    // pg_constraint만 체크하는 가드로는 "relation already exists" 충돌 회피 불가.
+    // CREATE UNIQUE INDEX IF NOT EXISTS는 pg_class 전체를 원자적으로 검사함.
     await queryRunner.query(`
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'uniq_cvote'
-        ) THEN
-          ALTER TABLE "cover_votes"
-            ADD CONSTRAINT "uniq_cvote" UNIQUE ("candidateId", "userId");
-        END IF;
-      END $$;
+      CREATE UNIQUE INDEX IF NOT EXISTS "uniq_cvote"
+      ON "cover_votes" ("candidateId", "userId")
     `);
 
     await queryRunner.query(`
