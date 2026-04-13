@@ -12,7 +12,7 @@ export const typeOrmConfig = (
   database: configService.getOrThrow<string>('DB_NAME'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  migrationsRun: false,
-  synchronize: configService.get<string>('NODE_ENV') !== 'production',
+  migrationsRun: true,
+  synchronize: false,
   logging: configService.get<string>('NODE_ENV') !== 'production',
 });
