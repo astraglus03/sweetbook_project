@@ -1,4 +1,6 @@
-import { useGroupBooks } from '../hooks/useBooks';
+import { useState } from 'react';
+import { useGroupBooks, useBook, useBookPages } from '../hooks/useBooks';
+import { BookPreviewModal } from './BookPreviewModal';
 
 const SPEC_LABEL = {
   SQUAREBOOK_HC: '정사각 하드커버',
@@ -23,7 +25,7 @@ function BookCoverThumb({ title }) {
   );
 }
 
-function BookCard({ book, navigate }) {
+function BookCard({ book, navigate, onPreview }) {
   const info = STATUS_INFO[book.status] ?? { label: book.status, cls: 'bg-gray-100 text-gray-600' };
   const specLabel = SPEC_LABEL[book.bookSpecUid] || book.bookSpecUid;
 
@@ -61,7 +63,7 @@ function BookCard({ book, navigate }) {
           )}
           {(book.status === 'READY' || book.status === 'ORDERED' || book.status === 'COMPLETED') && (
             <>
-              <button type="button" onClick={() => navigate(`/books/${book.id}/preview`)}
+              <button type="button" onClick={() => onPreview?.(book)}
                 className="h-9 px-4 text-[13px] font-medium bg-white border border-warm-border text-ink rounded-full hover:bg-warm-bg transition-colors">
                 미리보기
               </button>
@@ -79,6 +81,9 @@ function BookCard({ book, navigate }) {
 
 export function GroupBooksTab({ groupId, navigate }) {
   const { data: books, isLoading } = useGroupBooks(groupId);
+  const [previewBookId, setPreviewBookId] = useState(null);
+  const { data: previewBook } = useBook(previewBookId);
+  const { data: previewPages } = useBookPages(previewBookId);
 
   if (isLoading) {
     return (
@@ -121,9 +126,19 @@ export function GroupBooksTab({ groupId, navigate }) {
       </div>
       <div className="space-y-3">
         {bookList.map((book) => (
-          <BookCard key={book.id} book={book} navigate={navigate} />
+          <BookCard key={book.id} book={book} navigate={navigate} onPreview={(b) => setPreviewBookId(b.id)} />
         ))}
       </div>
+
+      {previewBookId && previewBook && (
+        <BookPreviewModal
+          book={previewBook}
+          pages={previewPages}
+          coverTemplateUid={previewBook.coverTemplateUid}
+          coverParams={previewBook.coverParams}
+          onClose={() => setPreviewBookId(null)}
+        />
+      )}
     </div>
   );
 }

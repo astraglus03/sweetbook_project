@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupDetail } from '../features/groups/hooks/useGroups';
-import { useGroupBooks, useDeleteBook } from '../features/books/hooks/useBooks';
+import { useGroupBooks, useDeleteBook, useBook, useBookPages } from '../features/books/hooks/useBooks';
 import { useMe } from '../features/auth/hooks/useAuth';
 import { SPEC_LABEL } from '../features/books/lib/bookLabels';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { BookPreviewModal } from '../features/books/components/BookPreviewModal';
 
 const STATUS_INFO = {
   DRAFT: { label: '편집 중', cls: 'bg-gray-100 text-gray-700' },
@@ -41,7 +42,7 @@ function BookCoverThumb({ book }) {
   );
 }
 
-function BookCard({ book, navigate, onDelete }) {
+function BookCard({ book, navigate, onDelete, onPreview }) {
   const info = STATUS_INFO[book.status] ?? { label: book.status, cls: 'bg-gray-100 text-gray-600' };
   const specLabel = SPEC_LABEL[book.bookSpecUid] ?? book.bookSpecUid;
   const isPersonal = book.bookType === 'PERSONAL';
@@ -53,7 +54,7 @@ function BookCard({ book, navigate, onDelete }) {
     } else if (book.status === 'PROCESSING') {
       return;
     } else {
-      navigate(`/books/${book.id}/preview`);
+      onPreview?.(book);
     }
   };
 
@@ -127,7 +128,7 @@ function BookCard({ book, navigate, onDelete }) {
             <>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); navigate(`/books/${book.id}/preview`); }}
+                onClick={(e) => { e.stopPropagation(); onPreview?.(book); }}
                 className="flex-1 h-8 text-[12px] font-medium bg-warm-bg border border-warm-border text-ink rounded-full hover:bg-warm-border transition-colors"
               >
                 미리보기
@@ -180,6 +181,9 @@ export function BookListPage() {
   const deleteBook = useDeleteBook(Number(groupId));
   const [bookToDelete, setBookToDelete] = useState(null);
   const [deleteError, setDeleteError] = useState('');
+  const [previewBookId, setPreviewBookId] = useState(null);
+  const { data: previewBook } = useBook(previewBookId);
+  const { data: previewPages } = useBookPages(previewBookId);
 
   const handleRequestDelete = (book) => {
     setDeleteError('');
@@ -312,7 +316,7 @@ export function BookListPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
             {filteredBooks.map((book) => (
-              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} onDelete={handleRequestDelete} />
+              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} onDelete={handleRequestDelete} onPreview={(b) => setPreviewBookId(b.id)} />
             ))}
           </div>
         )}
@@ -330,6 +334,16 @@ export function BookListPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
           </svg>
         </button>
+      )}
+
+      {previewBookId && previewBook && (
+        <BookPreviewModal
+          book={previewBook}
+          pages={previewPages}
+          coverTemplateUid={previewBook.coverTemplateUid}
+          coverParams={previewBook.coverParams}
+          onClose={() => setPreviewBookId(null)}
+        />
       )}
 
       <ConfirmDialog
