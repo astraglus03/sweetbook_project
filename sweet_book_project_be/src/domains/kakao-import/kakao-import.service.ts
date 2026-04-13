@@ -240,6 +240,7 @@ export class KakaoImportService {
     groupDir: string,
   ): Promise<void> {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+    // rotate(): EXIF orientation 반영 후 Sharp는 기본적으로 모든 메타데이터(EXIF GPS 포함)를 제거한다.
     const base = sharp(buffer).rotate().webp({ quality: 85 });
     const metadata = await sharp(buffer).metadata();
 
