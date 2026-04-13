@@ -10,6 +10,7 @@ import {
 } from '../features/cover-voting/hooks/useCoverVoting';
 import { CoverPreview } from '../features/cover-voting/components/CoverPreview';
 import { CoverCandidateModal } from '../features/cover-voting/components/CoverCandidateModal';
+import { usePhotos } from '../features/photos/hooks/usePhotos';
 
 export function CoverVotingPage() {
   const { groupId } = useParams();
@@ -19,6 +20,8 @@ export function CoverVotingPage() {
   const { data: group, isLoading: groupLoading } = useGroupDetail(gid);
   const { data: me } = useMe();
   const { data: candidates, isLoading, isError } = useCoverCandidates(gid);
+  const { data: photoData } = usePhotos(gid, { limit: 200 });
+  const photos = photoData?.photos ?? [];
   const deleteCandidate = useDeleteCoverCandidate(gid);
   const toggleVote = useToggleCoverVote(gid);
   const confirmCandidate = useConfirmCoverCandidate(gid);
@@ -43,8 +46,8 @@ export function CoverVotingPage() {
     toggleVote.mutate(id);
   };
 
-  const handleConfirm = (id, title) => {
-    if (!window.confirm(`"${title}" 표지로 확정하시겠습니까?`)) return;
+  const handleConfirm = (id) => {
+    if (!window.confirm('이 표지 후보로 확정하시겠습니까?')) return;
     setConfirmingId(id);
     confirmCandidate.mutate(id, {
       onSuccess: () => {
@@ -142,20 +145,13 @@ export function CoverVotingPage() {
               return (
                 <div key={candidate.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
                   <CoverPreview
-                    photoUrl={candidate.photoUrl}
-                    title={candidate.title}
-                    subtitle={candidate.subtitle}
                     templateUid={candidate.templateUid}
                     templateThumbnailUrl={null}
+                    params={candidate.params ?? {}}
+                    photos={photos}
                   />
 
                   <div className="p-3">
-                    <p className="text-sm font-semibold text-ink leading-tight truncate">
-                      {candidate.title}
-                    </p>
-                    {candidate.subtitle && (
-                      <p className="text-xs text-ink/50 mt-0.5 truncate">{candidate.subtitle}</p>
-                    )}
                     <p className="text-xs text-ink/40 mt-1">
                       {candidate.templateUid} · {candidate.creatorName}
                     </p>
@@ -190,7 +186,7 @@ export function CoverVotingPage() {
                         {/* 확정 (방장) */}
                         {isOwner && (
                           <button
-                            onClick={() => handleConfirm(candidate.id, candidate.title)}
+                            onClick={() => handleConfirm(candidate.id)}
                             disabled={isConfirming}
                             className="text-xs bg-ink text-white px-3 py-1.5 rounded-lg hover:bg-ink/80 transition-colors disabled:opacity-50"
                           >

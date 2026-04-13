@@ -13,17 +13,8 @@ export class CoverCandidateResponseDto {
   @ApiProperty()
   creatorName: string;
 
-  @ApiProperty()
-  photoId: number;
-
-  @ApiProperty()
-  photoUrl: string;
-
-  @ApiProperty()
-  title: string;
-
-  @ApiPropertyOptional()
-  subtitle: string | null;
+  @ApiProperty({ description: '슬롯별 파라미터: { [slotId]: photoId(number) | text(string) }' })
+  params: Record<string, string | number>;
 
   @ApiProperty({ description: 'Sweetbook 템플릿 UID' })
   templateUid: string;
