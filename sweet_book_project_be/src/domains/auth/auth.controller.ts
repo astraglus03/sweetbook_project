@@ -234,7 +234,9 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      // 버셀 + railway에서는 도메인이 달라서 none 같으면 lax
+      // sameSite: 'lax',
+      sameSite: 'none',
       path: '/',
       maxAge: ttlSeconds * 1000,
     };
