@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiConsumes,
@@ -34,6 +35,7 @@ export class PhotosController {
   constructor(private readonly photosService: PhotosService) {}
 
   @Post('groups/:groupId')
+  @Throttle({ upload: { limit: 30, ttl: 60_000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: '사진 업로드 (다중)' })
   @ApiConsumes('multipart/form-data')

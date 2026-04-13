@@ -83,7 +83,7 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-brand-light">
                       {member.userAvatarUrl ? (
-                        <img src={member.userAvatarUrl} alt="" className="w-full h-full object-cover" />
+                        <img src={member.userAvatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-sm font-medium text-brand">
                           {member.userName?.[0] ?? '?'}
@@ -138,7 +138,7 @@ export function MemberList({ groupId, members, currentUserId, ownerId, inviteCod
           <li key={member.id} className="flex items-center gap-3 bg-white rounded-2xl border border-warm-border p-3">
             <div className="w-10 h-10 rounded-full bg-brand-light flex-shrink-0 overflow-hidden">
               {member.userAvatarUrl ? (
-                <img src={member.userAvatarUrl} alt="" className="w-full h-full object-cover" />
+                <img src={member.userAvatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-sm font-medium text-brand">
                   {member.userName?.[0] ?? '?'}

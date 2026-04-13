@@ -52,7 +52,7 @@ export function UploaderRanking({ groupId, limit = 5 }) {
                 <span className="w-6 text-center text-sm flex-shrink-0">{medal}</span>
                 <div className="w-8 h-8 rounded-full bg-brand/10 flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-brand">
                   {uploader.avatarUrl ? (
-                    <img src={uploader.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={uploader.avatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     uploader.name?.[0] ?? '?'
                   )}

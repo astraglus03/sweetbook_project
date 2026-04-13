@@ -15,7 +15,7 @@ const TABS = [
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { data: user, refetch } = useMe();
+  const { data: user, isLoading: userLoading, isError: userError, refetch } = useMe();
   const logout = useLogout();
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -116,6 +116,47 @@ export default function ProfilePage() {
     }
   };
 
+  if (userLoading) {
+    return (
+      <div className="px-4 lg:px-10 lg:max-w-6xl lg:mx-auto py-8">
+        <div className="flex gap-6">
+          <aside className="hidden lg:block w-[240px] flex-shrink-0">
+            <div className="space-y-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-9 rounded-lg bg-warm-bg animate-pulse" />
+              ))}
+            </div>
+          </aside>
+          <div className="flex-1 max-w-[480px] space-y-5">
+            <div className="h-7 w-40 rounded-lg bg-warm-bg animate-pulse" />
+            <div className="flex items-center gap-4">
+              <div className="w-[72px] h-[72px] rounded-full bg-warm-bg animate-pulse flex-shrink-0" />
+              <div className="h-8 w-24 rounded-lg bg-warm-bg animate-pulse" />
+            </div>
+            <div className="h-[42px] rounded-[10px] bg-warm-bg animate-pulse" />
+            <div className="h-[42px] rounded-[10px] bg-warm-bg animate-pulse" />
+            <div className="h-[42px] w-24 rounded-full bg-warm-bg animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (userError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 px-4">
+        <p className="text-sm text-ink-sub">프로필을 불러오지 못했습니다.</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="px-4 py-2 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-hover transition-colors"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
   if (!user) return null;
 
   return (
@@ -195,7 +236,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-[72px] h-[72px] rounded-full bg-brand flex-shrink-0 overflow-hidden">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white">
                       {user.name?.[0]}
@@ -373,7 +414,7 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-lg bg-brand/10 flex-shrink-0 overflow-hidden flex items-center justify-center text-brand text-sm font-bold">
                             {g.coverImage ? (
-                              <img src={g.coverImage} alt="" className="w-full h-full object-cover" />
+                              <img src={g.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                               g.name?.[0] ?? '?'
                             )}

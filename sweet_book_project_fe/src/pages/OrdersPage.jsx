@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMyOrders, useCancelOrder } from '../features/orders/hooks/useOrders';
-import { useMyBooks } from '../features/books/hooks/useBooks';
+import { useMyBooks, useBook, useBookPages } from '../features/books/hooks/useBooks';
+import { BookPreviewModal } from '../features/books/components/BookPreviewModal';
 
 const STATUS_STEPS = [
   { key: 'order', label: '주문', statuses: ['PAID', 'PDF_READY'] },
@@ -229,6 +230,9 @@ function OrderCard({ order }) {
 
 function CartBookCard({ book }) {
   const navigate = useNavigate();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const { data: previewBook } = useBook(previewOpen ? book.id : null);
+  const { data: previewPages } = useBookPages(previewOpen ? book.id : null);
   const statusLabel =
     book.status === 'READY' ? '결제 대기' :
     book.status === 'DRAFT' ? '편집 중' :
@@ -265,7 +269,7 @@ function CartBookCard({ book }) {
           )}
           {(book.status === 'READY' || book.status === 'ORDERED') && (
             <>
-              <button type="button" onClick={() => navigate(`/books/${book.id}/preview`)}
+              <button type="button" onClick={() => setPreviewOpen(true)}
                 className="h-9 px-4 text-[13px] font-medium bg-white border border-warm-border text-ink rounded-full hover:bg-warm-bg transition-colors">
                 미리보기
               </button>
@@ -283,6 +287,15 @@ function CartBookCard({ book }) {
           )}
         </div>
       </div>
+      {previewOpen && previewBook && (
+        <BookPreviewModal
+          book={previewBook}
+          pages={previewPages}
+          coverTemplateUid={previewBook.coverTemplateUid}
+          coverParams={previewBook.coverParams}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }

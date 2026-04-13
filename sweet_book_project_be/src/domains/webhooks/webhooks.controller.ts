@@ -77,17 +77,19 @@ export class WebhooksController {
       `Received ${eventType} delivery=${deliveryId} event_uid=${payload.event_uid} test=${!!payload.isTest}`,
     );
 
+    // 중복 수신 차단을 위해 핸들러 실행 전 dedup 선마킹.
+    // 코드 오류성(결정적) 실패가 3회 재시도로 폭주하는 것을 막고,
+    // 일시 오류는 30분 주기 order-sync cron으로 상태 보정한다.
+    if (deliveryId) await this.dedup.markProcessed(deliveryId);
+
     try {
       await this.router.handle(payload);
     } catch (err) {
       this.logger.error(
-        `Handler failed for ${eventType} delivery=${deliveryId}: ${String(err)}`,
+        `Handler failed for ${eventType} delivery=${deliveryId}: ${String(err)} — dedup marked, relying on order-sync cron`,
       );
-      // Sweetbook 재시도 유도: 500 던지기 (3xx/4xx/5xx 모두 재시도 대상)
-      throw err;
     }
 
-    if (deliveryId) await this.dedup.markProcessed(deliveryId);
     return { received: true };
   }
 }

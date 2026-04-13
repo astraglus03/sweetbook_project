@@ -62,16 +62,16 @@ export function PhotoUploadModal({ groupId, groupName, isOpen, onClose }) {
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="사진 업로드" className="fixed inset-0 z-50 flex items-center justify-center">
+    <div role="dialog" aria-modal="true" aria-label="사진 업로드" className="fixed inset-0 z-50 flex items-start justify-center pt-16 lg:pt-24 overflow-y-auto">
       <div
-        className="absolute inset-0 bg-black/40"
+        className="fixed inset-0 bg-black/40"
         onClick={onClose}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
         role="button"
         tabIndex={0}
         aria-label="닫기"
       />
-      <div className="relative w-full max-w-[600px] mx-4 bg-white rounded-2xl p-8 lg:p-10 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-[600px] mx-4 bg-white rounded-2xl p-8 lg:p-10 shadow-xl mb-8">
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-[22px] font-bold text-ink">사진 업로드</h2>

@@ -91,7 +91,7 @@ function TemplatePicker({ availableTemplates, onSelect, onClose }) {
                     className="border border-warm-border rounded-xl p-3 text-left hover:border-brand hover:bg-brand/5 transition-colors relative"
                   >
                     {tpl.thumbnail || tpl.thumbnails?.layout ? (
-                      <img src={tpl.thumbnail || tpl.thumbnails?.layout} alt={tpl.templateName} className="w-full aspect-[4/3] object-cover rounded-lg mb-2 bg-warm-bg border border-warm-border/50" />
+                      <img src={tpl.thumbnail || tpl.thumbnails?.layout} alt={tpl.templateName} className="w-full aspect-[4/3] object-cover rounded-lg mb-2 bg-warm-bg border border-warm-border/50" loading="lazy" />
                     ) : (
                       <div className="w-full aspect-[4/3] bg-warm-bg rounded-lg mb-2 flex items-center justify-center text-ink-muted text-xs border border-warm-border/50">
                         미리보기 없음
@@ -181,7 +181,7 @@ function BulkPhotoPicker({ photos, onConfirm, onClose }) {
                     }`}
                     aria-pressed={isSel}
                   >
-                    <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+                    <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                     {isSel && (
                       <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-brand text-white text-[10px] font-bold flex items-center justify-center shadow">
                         ✓
@@ -259,7 +259,7 @@ function PhotoPicker({ photos, onSelect, onClose, groupId }) {
                   onClick={() => onSelect(photo)}
                   className="aspect-square rounded-lg overflow-hidden border border-warm-border hover:border-brand hover:ring-2 hover:ring-brand/30 transition shadow-sm"
                 >
-                  <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+                  <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 </button>
               ))}
             </div>
@@ -802,7 +802,7 @@ export function BookEditorPage() {
                         예시 보기
                       </summary>
                       <div className="mt-2 rounded-lg border border-warm-border overflow-hidden shadow-sm bg-white">
-                        <img src={currentTemplate.thumbnail} alt="내지 예시" className="w-full h-auto" />
+                        <img src={currentTemplate.thumbnail} alt="내지 예시" className="w-full h-auto" loading="lazy" />
                       </div>
                     </details>
                   )}
@@ -966,7 +966,7 @@ export function BookEditorPage() {
                     style={{ aspectRatio: `${aspectRatio}` }}
                   >
                     {page.thumbnailUrl ? (
-                      <img src={page.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={page.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full bg-warm-bg flex flex-col items-center justify-center p-1">
                         <span className="text-[8px] font-semibold text-ink-sub text-center leading-tight mb-0.5">

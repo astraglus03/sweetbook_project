@@ -75,7 +75,7 @@ export function Header() {
             className="w-8 h-8 rounded-full bg-brand overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-brand/30 transition"
           >
             {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <span className="text-white text-xs font-semibold">
                 {user?.name?.[0] ?? '?'}

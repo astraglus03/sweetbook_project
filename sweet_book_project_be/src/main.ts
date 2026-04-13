@@ -38,11 +38,14 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+  const isProd = configService.get<string>('NODE_ENV') === 'production';
+  if (!isProd) {
+    app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
+      prefix: '/uploads/',
+    });
+  }
 
-  const port = configService.get<number>('PORT', 3000);
+  const port = Number(configService.getOrThrow<string>('PORT'));
   await app.listen(port);
   logger.log(`Server running on http://localhost:${port}`);
   logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
