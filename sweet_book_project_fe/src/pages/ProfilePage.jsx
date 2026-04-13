@@ -40,52 +40,7 @@ export default function ProfilePage() {
   // Theme & groups
   const { theme, setTheme } = useThemeStore();
   const { data: myGroups } = useMyGroups();
-  const groupsList = Array.isArray(myGroups) ? myGroups : myGroups?.items ?? [];
-
-  // OAuth / set password (소셜 계정이 비밀번호를 최초 설정)
-  const [newPwForm, setNewPwForm] = useState({ newPassword: '', confirmPassword: '' });
-  const [newPwSaving, setNewPwSaving] = useState(false);
-  const [newPwMsg, setNewPwMsg] = useState(null);
-  const [unlinkSaving, setUnlinkSaving] = useState(false);
-  const [unlinkMsg, setUnlinkMsg] = useState(null);
-
-  const handleSetPassword = async () => {
-    if (newPwForm.newPassword !== newPwForm.confirmPassword) {
-      setNewPwMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다' });
-      return;
-    }
-    if (newPwForm.newPassword.length < 8) {
-      setNewPwMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다' });
-      return;
-    }
-    setNewPwSaving(true);
-    setNewPwMsg(null);
-    try {
-      await api.post('/users/me/set-password', { newPassword: newPwForm.newPassword });
-      setNewPwForm({ newPassword: '', confirmPassword: '' });
-      await refetch();
-      setNewPwMsg({ type: 'success', text: '비밀번호가 설정되었습니다' });
-    } catch (err) {
-      setNewPwMsg({ type: 'error', text: err.response?.data?.error?.message || '설정에 실패했습니다' });
-    } finally {
-      setNewPwSaving(false);
-    }
-  };
-
-  const handleUnlinkOAuth = async () => {
-    if (!window.confirm('소셜 계정 연동을 해제하시겠습니까? 해제 후에는 이메일+비밀번호로만 로그인할 수 있습니다.')) return;
-    setUnlinkSaving(true);
-    setUnlinkMsg(null);
-    try {
-      await api.post('/users/me/unlink-oauth');
-      await refetch();
-      setUnlinkMsg({ type: 'success', text: '연동이 해제되었습니다' });
-    } catch (err) {
-      setUnlinkMsg({ type: 'error', text: err.response?.data?.error?.message || '연동 해제에 실패했습니다' });
-    } finally {
-      setUnlinkSaving(false);
-    }
-  };
+  const groupsList = myGroups?.groups ?? [];
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -429,67 +384,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {user.provider !== 'local' && (
-                <div>
-                  <h2 className="text-[18px] font-bold text-ink mb-2">계정 연동</h2>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-ink-sub">현재 연동:</span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand/10 text-brand text-xs font-semibold rounded-full">
-                      {user.provider === 'google' ? 'Google' : user.provider === 'kakao' ? '카카오' : user.provider}
-                    </span>
-                  </div>
-                  {!user.hasPassword ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-                      <p className="text-xs text-amber-800">
-                        연동 해제 전에 비밀번호를 먼저 설정해야 로그인이 유지됩니다.
-                      </p>
-                      <input
-                        type="password"
-                        placeholder="새 비밀번호 (8자 이상)"
-                        value={newPwForm.newPassword}
-                        onChange={(e) => setNewPwForm((p) => ({ ...p, newPassword: e.target.value }))}
-                        className="w-full h-10 px-3 bg-white border border-warm-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                      />
-                      <input
-                        type="password"
-                        placeholder="비밀번호 확인"
-                        value={newPwForm.confirmPassword}
-                        onChange={(e) => setNewPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
-                        className="w-full h-10 px-3 bg-white border border-warm-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                      />
-                      {newPwMsg && (
-                        <p className={`text-xs ${newPwMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-                          {newPwMsg.text}
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleSetPassword}
-                        disabled={newPwSaving || !newPwForm.newPassword}
-                        className="h-10 px-5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50"
-                      >
-                        {newPwSaving ? '설정 중...' : '비밀번호 설정'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      {unlinkMsg && (
-                        <p className={`text-xs mb-2 ${unlinkMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-                          {unlinkMsg.text}
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleUnlinkOAuth}
-                        disabled={unlinkSaving}
-                        className="h-10 px-5 rounded-full border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
-                      >
-                        {unlinkSaving ? '해제 중...' : '소셜 계정 연동 해제'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
