@@ -2,6 +2,10 @@ import { api } from '../../../lib/axios';
 
 export const groupsApi = {
   create: (payload) => api.post('/groups', payload),
+  uploadCover: (groupId, formData) =>
+    api.post(`/groups/${groupId}/cover`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   getMyGroups: (params) => api.get('/groups', { params }),
   getDetail: (groupId) => api.get(`/groups/${groupId}`),
   update: (groupId, payload) => api.patch(`/groups/${groupId}`, payload),

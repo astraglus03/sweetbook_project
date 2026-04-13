@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateGroup } from '../features/groups/hooks/useGroups';
+import { useCreateGroup, useUploadGroupCover } from '../features/groups/hooks/useGroups';
 
 export default function CreateGroupPage() {
   const navigate = useNavigate();
   const createGroup = useCreateGroup();
+  const uploadCover = useUploadGroupCover();
   const [form, setForm] = useState({
     name: '',
     description: '',
     eventDate: '',
     uploadDeadline: '',
   });
+  const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
 
   const handleChange = (e) => {
@@ -20,22 +22,30 @@ export default function CreateGroupPage() {
   const handleCoverChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCoverPreview(url);
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = { name: form.name };
     if (form.description) payload.description = form.description;
     if (form.eventDate) payload.eventDate = form.eventDate;
     if (form.uploadDeadline) payload.uploadDeadline = form.uploadDeadline;
 
-    createGroup.mutate(payload, {
-      onSuccess: (group) => {
-        navigate(`/groups/${group.id}`);
-      },
-    });
+    try {
+      const group = await createGroup.mutateAsync(payload);
+      if (coverFile) {
+        try {
+          await uploadCover.mutateAsync({ groupId: group.id, file: coverFile });
+        } catch {
+          // 커버 업로드는 실패해도 그룹 생성은 성공으로 처리
+        }
+      }
+      navigate(`/groups/${group.id}`);
+    } catch {
+      // createGroup.isError 로 에러 표시됨
+    }
   };
 
   return (

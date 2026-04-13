@@ -113,8 +113,18 @@ export function GroupDetailPage() {
 
   return (
     <div>
-      {/* Dark header area */}
-      <div className="bg-ink px-4 py-4 lg:py-8 lg:px-10">
+      {/* Dark header area — 모임 커버 이미지를 배경으로 사용 */}
+      <div
+        className="relative bg-ink px-4 py-4 lg:py-8 lg:px-10 overflow-hidden"
+        style={
+          group.coverImage
+            ? {
+                backgroundImage: `linear-gradient(rgba(26,26,26,0.75), rgba(26,26,26,0.85)), url(${group.coverImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : undefined
+        }>
         {/* Top row: back + mobile action buttons (초대/업로드를 바로 눈앞에) */}
         <div className="flex items-center justify-between mb-3 lg:mb-4">
           <button
