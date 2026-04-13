@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   useGroupDetail,
   useLeaveGroup,
-  useUpdateGroupStatus,
   useFaceDetectionStatus,
 } from '../features/groups/hooks/useGroups';
 import { useMe } from '../features/auth/hooks/useAuth';
@@ -33,20 +32,12 @@ const STATUS_LABELS = {
   COMPLETED: '배송 완료',
 };
 
-const NEXT_STATUS = {
-  COLLECTING: { to: 'EDITING', label: '편집 시작' },
-  EDITING: { to: 'VOTING', label: '투표 시작' },
-  VOTING: { to: 'ORDERED', label: '주문 확정' },
-  ORDERED: { to: 'COMPLETED', label: '배송 완료 처리' },
-};
-
 export function GroupDetailPage() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { data: group, isLoading, isError } = useGroupDetail(Number(groupId));
   const { data: me } = useMe();
   const leaveGroup = useLeaveGroup();
-  const updateStatus = useUpdateGroupStatus(Number(groupId));
   const { data: faceStatus } = useFaceDetectionStatus(Number(groupId));
   const [activeTab, setActiveTab] = useState('photos');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -171,23 +162,7 @@ export function GroupDetailPage() {
               <span className="inline-flex px-2.5 py-0.5 bg-brand/25 text-brand text-xs font-medium rounded-full">
                 {STATUS_LABELS[group.status] ?? group.status}
               </span>
-              {isOwner && NEXT_STATUS[group.status] && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = NEXT_STATUS[group.status];
-                    if (!confirm(`${next.label}? 다음 단계로 진행해요`)) return;
-                    updateStatus.mutate(next.to);
-                  }}
-                  disabled={updateStatus.isPending}
-                  className="inline-flex px-2.5 py-0.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-full disabled:opacity-50"
-                >
-                  {updateStatus.isPending
-                    ? '...'
-                    : `→ ${NEXT_STATUS[group.status].label}`}
-                </button>
-              )}
-              {faceStatus?.inProgress && (
+{faceStatus?.inProgress && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-500/20 text-blue-200 text-xs font-medium rounded-full">
                   <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-pulse" />
                   얼굴 감지 중 {faceStatus.queue.waiting + faceStatus.queue.active}장
