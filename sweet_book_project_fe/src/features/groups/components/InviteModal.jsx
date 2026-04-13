@@ -61,11 +61,11 @@ export function InviteModal({ inviteCode, groupName, onClose, shareCopied, setSh
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-labelledby="invite-title" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-warm-border flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-ink">멤버 초대</h2>
+            <h2 id="invite-title" className="text-lg font-bold text-ink">멤버 초대</h2>
             <p className="text-xs text-ink-sub mt-1">QR 코드나 링크로 멤버를 초대하세요</p>
           </div>
           <button type="button" onClick={onClose}

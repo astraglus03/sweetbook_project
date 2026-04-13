@@ -62,7 +62,7 @@ export function BookPreviewModal({ book, pages, coverTemplateUid, coverParams, o
   const previewWidth = Math.round(480 * zoom);
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink flex flex-col">
+    <div role="dialog" aria-modal="true" aria-label="포토북 미리보기" className="fixed inset-0 z-50 bg-ink flex flex-col">
       {/* Top bar */}
       <div className="h-[52px] flex items-center justify-between px-4 lg:px-6 flex-shrink-0 border-b border-white/10">
         <button

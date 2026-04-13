@@ -151,6 +151,7 @@ export function CoverComposer({
 function PhotoPickerModal({ photos, onSelect, onClose }) {
   return (
     <div
+      role="dialog" aria-modal="true" aria-label="사진 선택"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >

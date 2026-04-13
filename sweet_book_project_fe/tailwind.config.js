@@ -11,12 +11,14 @@ export default {
         },
         warm: {
           bg: '#F8F5F0',
+          cream: '#F3EBE2',
           card: '#FFFFFF',
           border: '#E5E0D8',
           tag: '#C5BEB6',
         },
         ink: {
           DEFAULT: '#1A1A1A',
+          dim: '#3D3D3D',
           sub: '#6B6B6B',
           muted: '#9B9B9B',
         },

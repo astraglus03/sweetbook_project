@@ -50,7 +50,7 @@ function TemplatePicker({ availableTemplates, onSelect, onClose }) {
   const templates = availableTemplates[activeTab] || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="템플릿 선택" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 border-b border-warm-border flex flex-col gap-3">
           <div>
@@ -146,7 +146,7 @@ function BulkPhotoPicker({ photos, onConfirm, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="여러 사진 한 번에 추가" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 border-b border-warm-border flex items-center justify-between">
           <div>
@@ -227,7 +227,7 @@ function PhotoPicker({ photos, onSelect, onClose, groupId }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="사진 보관함" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 border-b border-warm-border flex justify-between items-center bg-warm-bg rounded-t-2xl">
           <h3 className="text-base font-bold text-ink">사진 보관함</h3>

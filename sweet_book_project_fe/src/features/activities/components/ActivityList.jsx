@@ -1,4 +1,5 @@
 import { useActivities } from '../hooks/useActivities';
+import { EmptyState } from '../../../components/ui/EmptyState';
 
 const TYPE_ICONS = {
   PHOTO_UPLOADED: '📷',
@@ -75,11 +76,11 @@ export function ActivityList({ groupId }) {
 
   if (items.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-2xl mb-3">📭</p>
-        <p className="text-sm text-ink-muted">아직 활동이 없어요</p>
-        <p className="text-xs text-ink-muted mt-1">사진을 업로드하거나 멤버를 초대해보세요</p>
-      </div>
+      <EmptyState
+        icon="📭"
+        title="아직 활동이 없어요"
+        description="사진을 업로드하거나 멤버를 초대하면 여기에 활동이 쌓여요"
+      />
     );
   }
 
