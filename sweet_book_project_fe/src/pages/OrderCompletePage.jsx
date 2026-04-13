@@ -125,11 +125,28 @@ export default function OrderCompletePage() {
               <p className="text-xs text-ink-sub mb-3">
                 {specLabel && `${specLabel} · `}{bookData.pageCount}페이지 · {order.quantity}권
               </p>
-              <button type="button" onClick={() => setShowPreview(true)}
-                disabled={!book || !pages}
-                className="h-9 px-4 rounded-full bg-ink text-white text-xs font-semibold hover:bg-black transition-colors disabled:opacity-50">
-                포토북 미리보기
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button type="button" onClick={() => setShowPreview(true)}
+                  disabled={!book || !pages}
+                  className="h-9 px-4 rounded-full bg-ink text-white text-xs font-semibold hover:bg-black transition-colors disabled:opacity-50">
+                  포토북 미리보기
+                </button>
+                {order.status === 'DELIVERED' && bookId && (
+                  <button type="button"
+                    onClick={() => window.open(`/books/${bookId}/print`, '_blank', 'noopener,noreferrer')}
+                    className="h-9 px-4 rounded-full bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors inline-flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    PDF로 저장
+                  </button>
+                )}
+              </div>
+              {order.status !== 'DELIVERED' && (
+                <p className="text-[11px] text-ink-muted mt-2">
+                  PDF 다운로드는 배송 완료 후 이용할 수 있어요
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -80,12 +80,6 @@ export function BookPreviewPage() {
           </button>
           <button
             type="button"
-            className="h-8 px-3.5 text-xs font-medium text-white border border-white/20 rounded-full hover:bg-white/10 transition-colors"
-          >
-            PDF
-          </button>
-          <button
-            type="button"
             onClick={() => navigate(`/books/${bookId}/order`)}
             className="h-8 px-4 text-xs font-semibold text-white bg-brand rounded-full hover:bg-brand-hover transition-colors"
           >
