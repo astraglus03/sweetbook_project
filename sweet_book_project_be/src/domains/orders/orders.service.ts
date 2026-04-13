@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -217,7 +216,6 @@ export class OrdersService {
       where: { orderGroupId, ordererId: userId },
     });
 
-    const idempotencyKey = `order-${randomUUID()}`;
     if (order) {
       order.recipientName = dto.recipientName;
       order.recipientPhone = dto.recipientPhone;
@@ -241,7 +239,7 @@ export class OrdersService {
         recipientAddressDetail: dto.recipientAddressDetail ?? null,
         memo: dto.memo ?? null,
         quantity: dto.quantity,
-        idempotencyKey,
+        idempotencyKey: `order-${orderGroup.bookId}-${userId}-${Date.now()}`,
         status: 'PENDING',
       });
     }
@@ -492,12 +490,11 @@ export class OrdersService {
       order.status = 'REJECTED';
       order.memo = rejectReason ?? null;
     } else {
-      const rejectIdempotencyKey = `order-${randomUUID()}`;
       order = this.orderRepository.create({
         orderGroupId,
         ordererId: userId,
         status: 'REJECTED',
-        idempotencyKey: rejectIdempotencyKey,
+        idempotencyKey: `order-${orderGroup.bookId}-${userId}-${Date.now()}`,
         quantity: 0,
         recipientName: null,
         recipientPhone: null,

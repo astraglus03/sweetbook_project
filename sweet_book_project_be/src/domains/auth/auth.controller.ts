@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -37,6 +38,7 @@ const REFRESH_COOKIE = 'refreshToken';
 
 @ApiTags('auth')
 @Controller('auth')
+@Throttle({ auth: { limit: 10, ttl: 60_000 } })
 export class AuthController {
   constructor(
     private readonly authService: AuthService,

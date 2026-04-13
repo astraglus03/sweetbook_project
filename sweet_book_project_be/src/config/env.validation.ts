@@ -11,9 +11,9 @@ class EnvVariables {
   @IsString()
   NODE_ENV?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  PORT?: string;
+  PORT: string;
 
   @IsNotEmpty()
   @IsString()
@@ -126,6 +126,19 @@ export const validateEnv = (config: Record<string, unknown>): EnvVariables => {
   const errors = validateSync(validated, { skipMissingProperties: false });
   if (errors.length > 0) {
     throw new Error(errors.toString());
+  }
+  if (validated.NODE_ENV === 'production') {
+    const required: Array<keyof EnvVariables> = [
+      'SWEETBOOK_API_KEY',
+      'SWEETBOOK_BASE_URL',
+      'SWEETBOOK_WEBHOOK_SECRET',
+    ];
+    const missing = required.filter((k) => !validated[k]);
+    if (missing.length > 0) {
+      throw new Error(
+        `Production environment missing required env: ${missing.join(', ')}`,
+      );
+    }
   }
   return validated;
 };

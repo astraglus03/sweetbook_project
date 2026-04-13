@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { typeOrmConfig } from './config/typeorm.config';
 import { validateEnv } from './config/env.validation';
@@ -37,6 +38,11 @@ import { FaceApiModule } from './external/face-api/face-api.module';
       useFactory: typeOrmConfig,
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 300 },
+      { name: 'auth', ttl: 60_000, limit: 10 },
+      { name: 'upload', ttl: 60_000, limit: 30 },
+    ]),
     RedisModule,
     EmailModule,
     AuthModule,
@@ -57,6 +63,7 @@ import { FaceApiModule } from './external/face-api/face-api.module';
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })

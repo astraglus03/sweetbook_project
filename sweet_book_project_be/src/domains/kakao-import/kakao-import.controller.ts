@@ -7,6 +7,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -25,6 +26,7 @@ export class KakaoImportController {
   constructor(private readonly service: KakaoImportService) {}
 
   @Post()
+  @Throttle({ upload: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: '카카오톡 zip 업로드 및 사진 import' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
