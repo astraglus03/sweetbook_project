@@ -55,16 +55,7 @@ export function BookPreviewModal({ book, pages, coverTemplateUid, coverParams, o
       else if (e.key === 'Escape') onClose?.();
     };
     window.addEventListener('keydown', onKey);
-    // body 스크롤 락 + 스크롤 위치 상단으로 복원
-    const prevOverflow = document.body.style.overflow;
-    const prevScrollTop = window.scrollY;
-    document.body.style.overflow = 'hidden';
-    window.scrollTo(0, 0);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
-      window.scrollTo(0, prevScrollTop);
-    };
+    return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageList.length]);
 
@@ -103,7 +94,7 @@ export function BookPreviewModal({ book, pages, coverTemplateUid, coverParams, o
       </div>
 
       {/* Page viewer */}
-      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-6 relative overflow-auto">
+      <div className="flex-1 flex items-center justify-center px-4 py-6 relative overflow-auto">
         {/* Prev button */}
         <button
           type="button"
