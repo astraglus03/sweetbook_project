@@ -29,6 +29,7 @@ export const CreateGroupPage = lazy(() => import('../pages/CreateGroupPage'));
 export const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 export const OrderPage = lazy(() => import('../pages/OrderPage'));
 export const OrderCompletePage = lazy(() => import('../pages/OrderCompletePage'));
+export const BookPrintPage = lazy(() => import('../pages/BookPrintPage'));
 
 export function RouteSpinner() {
   return (

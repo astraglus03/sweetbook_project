@@ -42,33 +42,33 @@ export default function ProfilePage() {
   const { data: myGroups } = useMyGroups();
   const groupsList = Array.isArray(myGroups) ? myGroups : myGroups?.items ?? [];
 
-  // OAuth / set password
-  const [setPwForm, setSetPwForm] = useState({ newPassword: '', confirmPassword: '' });
-  const [setPwSaving, setSetPwSaving] = useState(false);
-  const [setPwMsg, setSetPwMsg] = useState(null);
+  // OAuth / set password (소셜 계정이 비밀번호를 최초 설정)
+  const [newPwForm, setNewPwForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [newPwSaving, setNewPwSaving] = useState(false);
+  const [newPwMsg, setNewPwMsg] = useState(null);
   const [unlinkSaving, setUnlinkSaving] = useState(false);
   const [unlinkMsg, setUnlinkMsg] = useState(null);
 
   const handleSetPassword = async () => {
-    if (setPwForm.newPassword !== setPwForm.confirmPassword) {
-      setSetPwMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다' });
+    if (newPwForm.newPassword !== newPwForm.confirmPassword) {
+      setNewPwMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다' });
       return;
     }
-    if (setPwForm.newPassword.length < 8) {
-      setSetPwMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다' });
+    if (newPwForm.newPassword.length < 8) {
+      setNewPwMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다' });
       return;
     }
-    setSetPwSaving(true);
-    setSetPwMsg(null);
+    setNewPwSaving(true);
+    setNewPwMsg(null);
     try {
-      await api.post('/users/me/set-password', { newPassword: setPwForm.newPassword });
-      setSetPwForm({ newPassword: '', confirmPassword: '' });
+      await api.post('/users/me/set-password', { newPassword: newPwForm.newPassword });
+      setNewPwForm({ newPassword: '', confirmPassword: '' });
       await refetch();
-      setSetPwMsg({ type: 'success', text: '비밀번호가 설정되었습니다' });
+      setNewPwMsg({ type: 'success', text: '비밀번호가 설정되었습니다' });
     } catch (err) {
-      setSetPwMsg({ type: 'error', text: err.response?.data?.error?.message || '설정에 실패했습니다' });
+      setNewPwMsg({ type: 'error', text: err.response?.data?.error?.message || '설정에 실패했습니다' });
     } finally {
-      setSetPwSaving(false);
+      setNewPwSaving(false);
     }
   };
 
@@ -438,7 +438,7 @@ export default function ProfilePage() {
                       {user.provider === 'google' ? 'Google' : user.provider === 'kakao' ? '카카오' : user.provider}
                     </span>
                   </div>
-                  {!user.hasPassword && !user.passwordHash ? (
+                  {!user.hasPassword ? (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                       <p className="text-xs text-amber-800">
                         연동 해제 전에 비밀번호를 먼저 설정해야 로그인이 유지됩니다.
@@ -446,29 +446,29 @@ export default function ProfilePage() {
                       <input
                         type="password"
                         placeholder="새 비밀번호 (8자 이상)"
-                        value={setPwForm.newPassword}
-                        onChange={(e) => setSetPwForm((p) => ({ ...p, newPassword: e.target.value }))}
+                        value={newPwForm.newPassword}
+                        onChange={(e) => setNewPwForm((p) => ({ ...p, newPassword: e.target.value }))}
                         className="w-full h-10 px-3 bg-white border border-warm-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                       />
                       <input
                         type="password"
                         placeholder="비밀번호 확인"
-                        value={setPwForm.confirmPassword}
-                        onChange={(e) => setSetPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                        value={newPwForm.confirmPassword}
+                        onChange={(e) => setNewPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
                         className="w-full h-10 px-3 bg-white border border-warm-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                       />
-                      {setPwMsg && (
-                        <p className={`text-xs ${setPwMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-                          {setPwMsg.text}
+                      {newPwMsg && (
+                        <p className={`text-xs ${newPwMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                          {newPwMsg.text}
                         </p>
                       )}
                       <button
                         type="button"
                         onClick={handleSetPassword}
-                        disabled={setPwSaving || !setPwForm.newPassword}
+                        disabled={newPwSaving || !newPwForm.newPassword}
                         className="h-10 px-5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50"
                       >
-                        {setPwSaving ? '설정 중...' : '비밀번호 설정'}
+                        {newPwSaving ? '설정 중...' : '비밀번호 설정'}
                       </button>
                     </div>
                   ) : (

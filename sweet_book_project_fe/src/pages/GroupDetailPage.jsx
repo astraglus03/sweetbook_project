@@ -114,18 +114,50 @@ export function GroupDetailPage() {
   return (
     <div>
       {/* Dark header area */}
-      <div className="bg-ink px-4 py-6 lg:py-8 lg:px-10">
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={() => navigate('/groups')}
-          className="flex items-center gap-1 text-sm text-white/50 hover:text-white/80 transition-colors mb-4"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          내 모임
-        </button>
+      <div className="bg-ink px-4 py-4 lg:py-8 lg:px-10">
+        {/* Top row: back + mobile action buttons (초대/업로드를 바로 눈앞에) */}
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
+          <button
+            type="button"
+            onClick={() => navigate('/groups')}
+            className="flex items-center gap-1 text-sm text-white/50 hover:text-white/80 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            내 모임
+          </button>
+
+          {/* Mobile-only primary actions: 즉시 보이는 위치 */}
+          <div className="flex lg:hidden items-center gap-1.5">
+            <button type="button" onClick={() => setIsUploadOpen(true)}
+              className="h-9 px-3.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1"
+              aria-label="사진 업로드">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              업로드
+            </button>
+            <button type="button" onClick={() => setIsInviteOpen(true)}
+              className="h-9 px-3.5 rounded-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold flex items-center gap-1"
+              aria-label="멤버 초대">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              초대
+            </button>
+            {isOwner && (
+              <button type="button" onClick={() => setIsSettingsOpen((v) => !v)}
+                className={`w-9 h-9 flex items-center justify-center rounded-full text-white ${isSettingsOpen ? 'bg-white/25' : 'bg-white/10 hover:bg-white/20'}`}
+                aria-label="모임 설정">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Group info row */}
         <div className="flex items-start gap-4 lg:gap-8">
@@ -232,42 +264,15 @@ export function GroupDetailPage() {
           </div>
         </div>
 
-        {/* Action buttons — mobile/tablet: dedicated row below info, full-width primary */}
-        <div className="lg:hidden mt-4 flex items-stretch gap-2">
-          <button type="button" onClick={() => setIsInviteOpen(true)}
-            className="flex-1 h-11 rounded-full bg-brand hover:bg-brand-hover transition-colors text-white text-sm font-semibold flex items-center justify-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            초대하기
-          </button>
-          <button type="button" onClick={() => setIsUploadOpen(true)}
-            className="flex-1 h-11 rounded-full bg-white/15 hover:bg-white/25 transition-colors text-white text-sm font-semibold flex items-center justify-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            업로드
-          </button>
-          {isOwner && (
-            <button type="button" onClick={() => setIsSettingsOpen((v) => !v)}
-              className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors text-white flex-shrink-0 ${isSettingsOpen ? 'bg-white/25' : 'bg-white/15 hover:bg-white/25'}`}
-              title="모임 설정">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          )}
-          {!isOwner && (
+        {/* Mobile leave button (non-owner) */}
+        {!isOwner && (
+          <div className="lg:hidden mt-3">
             <button type="button" onClick={handleLeave} disabled={leaveGroup.isPending}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/15 hover:bg-red-500/30 transition-colors text-white/70 hover:text-red-200 disabled:opacity-50 flex-shrink-0"
-              title="모임 나가기">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              className="h-9 px-4 rounded-full bg-white/10 hover:bg-red-500/30 text-white/70 text-xs font-medium disabled:opacity-50">
+              모임 나가기
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Invite modal */}
