@@ -47,15 +47,8 @@ export function TemplateCanvas({ template, params, photos, onParamChange, isEdit
       {/* Canvas with numbered badges */}
       <div
         className="relative bg-white rounded-lg overflow-hidden border border-warm-border shadow-sm mx-auto"
-        style={{
-          paddingBottom: `${canvasRatio * 100}%`,
-          width: '100%',
-          backgroundImage: kind === 'cover' && template.thumbnail ? `url(${template.thumbnail})` : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+        style={{ paddingBottom: `${canvasRatio * 100}%`, width: '100%' }}
       >
-        {/* 표지는 프리뷰에서도 실제 인쇄와 동일한 배경 위에 슬롯이 올라가도록 한다. */}
         <div className="absolute inset-0 w-full h-full">
           {variableElements.map((el, idx) => {
             const left = (el.x / maxX) * 100;
