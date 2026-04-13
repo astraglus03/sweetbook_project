@@ -18,16 +18,20 @@ export class ProfileResponseDto {
   @ApiProperty()
   provider: AuthProvider;
 
+  @ApiProperty({ description: '비밀번호가 설정되어 있는지' })
+  hasPassword: boolean;
+
   @ApiProperty()
   createdAt: Date;
 
-  static from(user: User): ProfileResponseDto {
+  static from(user: User, hasPassword?: boolean): ProfileResponseDto {
     const dto = new ProfileResponseDto();
     dto.id = user.id;
     dto.email = user.email;
     dto.name = user.name;
     dto.avatarUrl = user.avatarUrl;
     dto.provider = user.provider;
+    dto.hasPassword = hasPassword ?? !!user.passwordHash;
     dto.createdAt = user.createdAt;
     return dto;
   }
