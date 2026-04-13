@@ -20,6 +20,7 @@ import { NotificationsModule } from './domains/notifications/notifications.modul
 import { KakaoImportModule } from './domains/kakao-import/kakao-import.module';
 import { WebhooksModule } from './domains/webhooks/webhooks.module';
 import { ActivitiesModule } from './domains/activities/activities.module';
+import { CoverVotingModule } from './domains/cover-voting/cover-voting.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
 import { FaceApiModule } from './external/face-api/face-api.module';
@@ -48,6 +49,7 @@ import { FaceApiModule } from './external/face-api/face-api.module';
     KakaoImportModule,
     WebhooksModule,
     ActivitiesModule,
+    CoverVotingModule,
     SweetbookModule,
     OpenAiModule,
     FaceApiModule,

@@ -18,6 +18,7 @@ export type GroupActivityType =
   | 'KAKAO_IMPORTED'
   | 'PERSONAL_BOOK_READY'
   | 'COVER_VOTED'
+  | 'COVER_CONFIRMED'
   | 'BOOK_FINALIZED';
 
 @Entity('group_activities')

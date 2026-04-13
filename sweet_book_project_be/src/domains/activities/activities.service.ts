@@ -119,6 +119,8 @@ export class ActivitiesService {
         return `${actor}님의 개인 포토북이 준비됐어요`;
       case 'COVER_VOTED':
         return `${actor}님이 표지에 투표했어요`;
+      case 'COVER_CONFIRMED':
+        return `방장이 "${payload.title ?? '표지'}" 표지를 확정했어요`;
       case 'BOOK_FINALIZED':
         return `"${payload.title ?? '포토북'}" 포토북이 완성됐어요`;
       default:
