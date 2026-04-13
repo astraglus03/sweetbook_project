@@ -10,9 +10,14 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -84,6 +89,25 @@ export class GroupsController {
     @Body() dto: UpdateGroupDto,
   ): Promise<GroupResponseDto> {
     return this.groupsService.updateGroup(groupId, user.id, dto);
+  }
+
+  @Post(':groupId/cover')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '모임 커버 이미지 업로드 (방장만)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiOkResponse({ type: GroupResponseDto })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  uploadCover(
+    @CurrentUser() user: User,
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<GroupResponseDto> {
+    return this.groupsService.uploadCover(groupId, user.id, file);
   }
 
   @Delete(':groupId')

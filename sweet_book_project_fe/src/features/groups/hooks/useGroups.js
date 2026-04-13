@@ -42,6 +42,22 @@ export function useGroupByCode(code) {
   });
 }
 
+export function useUploadGroupCover() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ groupId, file }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await groupsApi.uploadCover(groupId, formData);
+      return res.data;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: GROUPS_LIST_KEY });
+      queryClient.invalidateQueries({ queryKey: groupDetailKey(groupId) });
+    },
+  });
+}
+
 export function useCreateGroup() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import sharp from 'sharp';
 import { Photo } from '../photos/entities/photo.entity';
 import { UserFaceAnchor } from '../photos/entities/user-face-anchor.entity';
 import {
@@ -41,7 +45,47 @@ export class GroupsService {
     @InjectRepository(UserFaceAnchor)
     private readonly faceAnchorRepository: Repository<UserFaceAnchor>,
     private readonly activitiesService: ActivitiesService,
+    private readonly configService: ConfigService,
   ) {}
+
+  async uploadCover(
+    groupId: number,
+    userId: number,
+    file: Express.Multer.File,
+  ): Promise<GroupResponseDto> {
+    if (!file) {
+      throw new ValidationException('GROUP_COVER_REQUIRED', '이미지가 필요합니다');
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.mimetype)) {
+      throw new ValidationException(
+        'GROUP_COVER_INVALID_MIMETYPE',
+        '지원하지 않는 이미지 형식입니다',
+      );
+    }
+
+    const group = await this.findGroupOrFail(groupId);
+    this.verifyOwner(group, userId);
+
+    const dir = path.join(process.cwd(), 'uploads', 'groups', String(groupId));
+    await fs.mkdir(dir, { recursive: true });
+    const filename = `cover-${Date.now()}.webp`;
+    const filePath = path.join(dir, filename);
+
+    await sharp(file.buffer)
+      .rotate()
+      .resize(1600, 900, { fit: 'cover', position: 'attention' })
+      .webp({ quality: 85 })
+      .toFile(filePath);
+
+    const baseUrl = this.configService.getOrThrow<string>('BASE_URL');
+    const coverUrl = `${baseUrl}/uploads/groups/${groupId}/${filename}`;
+
+    group.coverImage = coverUrl;
+    await this.groupsRepository.save(group);
+
+    return GroupResponseDto.from(group);
+  }
 
   private async countPhotosByGroupIds(
     groupIds: number[],
