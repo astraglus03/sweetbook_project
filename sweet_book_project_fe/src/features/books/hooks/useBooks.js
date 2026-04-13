@@ -106,6 +106,17 @@ export function useCreateBook(groupId) {
   });
 }
 
+export function useDeleteBook(groupId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId) => booksApi.deleteBook(bookId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books', 'group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['books', 'my'] });
+    },
+  });
+}
+
 export function useAddPages(bookId) {
   const queryClient = useQueryClient();
   return useMutation({

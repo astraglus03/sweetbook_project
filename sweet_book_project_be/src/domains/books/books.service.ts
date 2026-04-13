@@ -18,6 +18,7 @@ import { UpdateCoverDto } from './dto/update-cover.dto';
 import { BookResponseDto } from './dto/book-response.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { CoverVotingService } from '../cover-voting/cover-voting.service';
 
 interface BookSpec {
   bookSpecUid: string;
@@ -54,6 +55,7 @@ export class BooksService {
     private readonly configService: ConfigService,
     private readonly notificationsService: NotificationsService,
     private readonly activitiesService: ActivitiesService,
+    private readonly coverVotingService: CoverVotingService,
   ) {}
 
   async getBookSpecs() {
@@ -89,6 +91,23 @@ export class BooksService {
     const timestamp = Date.now();
     const externalRef = `book-group${groupId}-user${userId}-${timestamp}`;
 
+    let coverTemplateUid: string | null = null;
+    let coverParams: Record<string, string | number> | null = null;
+    if (dto.coverCandidateId) {
+      const candidate = await this.coverVotingService.getCandidateForBook(
+        groupId,
+        dto.coverCandidateId,
+      );
+      if (candidate.bookSpecUid !== dto.bookSpecUid) {
+        throw new ForbiddenException(
+          'COVER_SPEC_MISMATCH',
+          '표지 후보의 판형이 포토북 판형과 다릅니다',
+        );
+      }
+      coverTemplateUid = candidate.templateUid;
+      coverParams = candidate.params ?? {};
+    }
+
     const book = this.bookRepository.create({
       groupId,
       title: dto.title,
@@ -99,6 +118,8 @@ export class BooksService {
       shareCode,
       status: 'DRAFT',
       bookType: 'SHARED',
+      coverTemplateUid,
+      coverParams: coverParams as Record<string, string> | null,
     });
     const saved = await this.bookRepository.save(book);
 
@@ -148,6 +169,34 @@ export class BooksService {
       order: { createdAt: 'DESC' },
     });
     return books.map(BookResponseDto.from);
+  }
+
+  async deleteBook(bookId: number, userId: number): Promise<void> {
+    const book = await this.findBookOrFail(bookId);
+    this.verifyCreator(book, userId);
+
+    if (book.status !== 'DRAFT' && book.status !== 'FAILED') {
+      throw new ForbiddenException(
+        'BOOK_NOT_DELETABLE',
+        `DRAFT 또는 FAILED 상태만 삭제할 수 있습니다 (현재: ${book.status})`,
+      );
+    }
+
+    // Sweetbook 쪽 책도 삭제 (실패해도 로컬 삭제는 진행)
+    if (book.sweetbookBookUid) {
+      try {
+        await this.sweetbookApiService.deleteBook(book.sweetbookBookUid);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to delete Sweetbook book ${book.sweetbookBookUid}: ${String(err)}`,
+        );
+      }
+    }
+
+    await this.bookPageRepository.delete({ bookId });
+    await this.bookRepository.remove(book);
+
+    this.logger.log(`Book ${bookId} deleted by user ${userId}`);
   }
 
   async addPages(
@@ -362,7 +411,12 @@ export class BooksService {
     const coverParams: Record<string, string> = book.coverParams
       ? { ...book.coverParams }
       : {};
-    const coverFileKeys = fileKeys(coverDefs);
+    // 사용자가 테마 기본 표지와 다른 템플릿을 골랐다면 해당 템플릿의 defs를 다시 조회
+    const effectiveCoverDefs =
+      userCoverTplUid === uid(coverTpl)
+        ? coverDefs
+        : await fetchDefs(userCoverTplUid);
+    const coverFileKeys = fileKeys(effectiveCoverDefs);
     // file 바인딩: 사용자가 지정한 photo ID를 Sweetbook에 업로드하고 fileName으로 치환
     for (const fk of coverFileKeys) {
       const raw = coverParams[fk];
@@ -413,7 +467,7 @@ export class BooksService {
       }
     }
     // 사용자 입력이 없는 텍스트 파라미터에 기본값
-    for (const [key, def] of Object.entries(coverDefs)) {
+    for (const [key, def] of Object.entries(effectiveCoverDefs)) {
       if (def.binding !== 'text') continue;
       if (coverParams[key]) continue;
       if (/title|spineTitle/i.test(key)) coverParams[key] = book.title;
@@ -508,10 +562,42 @@ export class BooksService {
       this.logger.log(
         `Padding ${targetPageCount - contentPageCount} blank pages (${contentPageCount} → ${targetPageCount})`,
       );
+      // blank template의 필수 파라미터를 기본값으로 채움
+      if (!defsCache.has(blankUid)) {
+        defsCache.set(blankUid, await fetchDefs(blankUid));
+      }
+      const blankDefs = defsCache.get(blankUid)!;
+      const blankFileKeys = fileKeys(blankDefs);
+      const fallbackFileName = [...uploadedFileNames.values()][0];
+
+      const blankParams: Record<string, string | string[]> = {};
+      // file 바인딩: 업로드된 사진으로 채움
+      if (fallbackFileName) {
+        for (const fk of blankFileKeys) {
+          const def = blankDefs[fk];
+          blankParams[fk] = isMultiFileBinding(def.binding)
+            ? [fallbackFileName]
+            : fallbackFileName;
+        }
+      }
+      // text 바인딩: 필수 필드 기본값
+      for (const [key, def] of Object.entries(blankDefs)) {
+        if (def.binding !== 'text') continue;
+        if (blankParams[key]) continue;
+        if (/title|bookTitle/i.test(key)) blankParams[key] = book.title;
+        else if (/year/i.test(key))
+          blankParams[key] = new Date().getFullYear().toString();
+        else if (/month/i.test(key))
+          blankParams[key] = (new Date().getMonth() + 1).toString();
+        else if (/date/i.test(key))
+          blankParams[key] = new Date().getDate().toString();
+        else blankParams[key] = ' ';
+      }
+
       for (let i = contentPageCount; i < targetPageCount; i++) {
         await this.sweetbookApiService.addContents(book.sweetbookBookUid, {
           templateUid: blankUid,
-          parameters: {},
+          parameters: blankParams,
           breakBefore: 'page',
         });
       }

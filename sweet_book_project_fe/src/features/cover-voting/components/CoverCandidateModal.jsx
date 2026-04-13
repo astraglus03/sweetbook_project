@@ -3,14 +3,15 @@ import { usePhotos } from '../../photos/hooks/usePhotos';
 import { useBookSpecs, useCoverTemplates } from '../../books/hooks/useBooks';
 import { specLabel } from '../../books/lib/bookLabels';
 import { CoverComposer } from '../../books/components/CoverComposer';
-import { useCreateCoverCandidate } from '../hooks/useCoverVoting';
+import { useCreateCoverCandidate, useUpdateCoverCandidate } from '../hooks/useCoverVoting';
 
-export function CoverCandidateModal({ groupId, onClose }) {
+export function CoverCandidateModal({ groupId, candidate = null, onClose }) {
+  const isEdit = !!candidate;
   const { data: specsRaw, isLoading: specsLoading } = useBookSpecs();
   const specs = Array.isArray(specsRaw) ? specsRaw : [];
 
-  // Default to first spec once loaded
-  const [bookSpecUid, setBookSpecUid] = useState(null);
+  // Default to first spec once loaded (또는 수정 중이면 후보의 spec)
+  const [bookSpecUid, setBookSpecUid] = useState(candidate?.bookSpecUid ?? null);
   const activeSpecUid = bookSpecUid ?? specs[0]?.bookSpecUid ?? null;
 
   const { data: templatesRaw, isLoading: templatesLoading } = useCoverTemplates(activeSpecUid);
@@ -22,7 +23,7 @@ export function CoverCandidateModal({ groupId, onClose }) {
     return ['전체', ...Array.from(set)];
   }, [templateList]);
 
-  const [selectedTheme, setSelectedTheme] = useState('전체');
+  const [selectedTheme, setSelectedTheme] = useState(candidate?.theme ?? '전체');
 
   // Reset theme when spec changes
   const handleSpecChange = (uid) => {
@@ -38,13 +39,14 @@ export function CoverCandidateModal({ groupId, onClose }) {
     return templateList.filter((t) => (t.theme ?? '') === selectedTheme);
   }, [templateList, selectedTheme]);
 
-  const [templateUid, setTemplateUid] = useState(null);
-  const [params, setParams] = useState({});
+  const [templateUid, setTemplateUid] = useState(candidate?.templateUid ?? null);
+  const [params, setParams] = useState(candidate?.params ?? {});
 
   const { data: photoData, isLoading: photosLoading } = usePhotos(groupId, { limit: 100 });
   const photos = photoData?.photos ?? [];
 
   const createCandidate = useCreateCoverCandidate(groupId);
+  const updateCandidate = useUpdateCoverCandidate(groupId);
 
   const handleComposerChange = (newTemplateUid, newParams) => {
     setTemplateUid(newTemplateUid);
@@ -59,19 +61,22 @@ export function CoverCandidateModal({ groupId, onClose }) {
     if (!isValid) return;
 
     const selectedTemplate = templateList.find((t) => t.templateUid === templateUid);
+    const dto = {
+      templateUid,
+      bookSpecUid: activeSpecUid,
+      templateName: selectedTemplate?.templateName ?? undefined,
+      theme: selectedTemplate?.theme ?? undefined,
+      params,
+    };
 
-    createCandidate.mutate(
-      {
-        templateUid,
-        bookSpecUid: activeSpecUid,
-        templateName: selectedTemplate?.templateName ?? undefined,
-        theme: selectedTemplate?.theme ?? undefined,
-        params,
-      },
-      {
-        onSuccess: () => onClose(),
-      },
-    );
+    if (isEdit) {
+      updateCandidate.mutate(
+        { id: candidate.id, dto },
+        { onSuccess: () => onClose() },
+      );
+    } else {
+      createCandidate.mutate(dto, { onSuccess: () => onClose() });
+    }
   };
 
   return (
@@ -79,7 +84,7 @@ export function CoverCandidateModal({ groupId, onClose }) {
       <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-warm-border sticky top-0 bg-white z-10">
-          <h2 className="text-base font-semibold text-ink">표지 후보 추가</h2>
+          <h2 className="text-base font-semibold text-ink">{isEdit ? '표지 후보 수정' : '표지 후보 추가'}</h2>
           <button
             onClick={onClose}
             className="text-ink/40 hover:text-ink transition-colors text-xl leading-none"
@@ -174,10 +179,12 @@ export function CoverCandidateModal({ groupId, onClose }) {
 
           <button
             type="submit"
-            disabled={!isValid || createCandidate.isPending}
+            disabled={!isValid || createCandidate.isPending || updateCandidate.isPending}
             className="w-full h-12 rounded-xl bg-brand text-white text-sm font-semibold disabled:opacity-40 hover:bg-brand/90 transition-colors"
           >
-            {createCandidate.isPending ? '추가 중...' : '후보 추가'}
+            {isEdit
+              ? (updateCandidate.isPending ? '저장 중...' : '수정 저장')
+              : (createCandidate.isPending ? '추가 중...' : '후보 추가')}
           </button>
         </form>
       </div>

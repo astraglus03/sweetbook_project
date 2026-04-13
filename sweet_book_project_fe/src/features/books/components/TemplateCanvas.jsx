@@ -56,7 +56,11 @@ export function TemplateCanvas({ template, params, photos, onParamChange, isEdit
             const width = (el.width / maxX) * 100;
             const height = (el.height / maxY) * 100;
             const def = paramDefs[el.variable];
-            const isPhoto = el.type === 'photo' || def?.binding === 'file' || def?.binding === 'rowGallery';
+            const bindingRaw = (def?.binding ?? '').toLowerCase();
+            const isPhoto = el.type === 'photo' || el.type === 'image'
+              || bindingRaw.includes('file') || bindingRaw.includes('photo')
+              || bindingRaw.includes('image') || bindingRaw.includes('collage')
+              || bindingRaw.includes('gallery');
             const value = params?.[el.variable] ?? '';
             const badgeNum = idx + 1;
 
@@ -154,7 +158,11 @@ export function TemplateCanvas({ template, params, photos, onParamChange, isEdit
           <div className="space-y-3">
             {variableElements.map((el, idx) => {
               const def = paramDefs[el.variable];
-              const isPhoto = el.type === 'photo' || def?.binding === 'file' || def?.binding === 'rowGallery';
+              const bindingRaw = (def?.binding ?? '').toLowerCase();
+            const isPhoto = el.type === 'photo' || el.type === 'image'
+              || bindingRaw.includes('file') || bindingRaw.includes('photo')
+              || bindingRaw.includes('image') || bindingRaw.includes('collage')
+              || bindingRaw.includes('gallery');
               const value = params?.[el.variable] ?? '';
               const badgeNum = idx + 1;
               const label = def?.label ?? def?.description ?? el.variable;

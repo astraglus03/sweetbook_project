@@ -14,5 +14,6 @@ import { ActivitiesModule } from '../activities/activities.module';
   ],
   controllers: [CoverVotingController],
   providers: [CoverVotingService],
+  exports: [CoverVotingService],
 })
 export class CoverVotingModule {}

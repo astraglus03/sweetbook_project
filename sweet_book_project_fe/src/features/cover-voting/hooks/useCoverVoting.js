@@ -17,11 +17,36 @@ export function useCoverCandidates(groupId) {
   });
 }
 
+export function useCoverCandidate(groupId, candidateId) {
+  return useQuery({
+    queryKey: ['cover-candidates', groupId, candidateId],
+    queryFn: async () => {
+      const res = await coverVotingApi.findOne(groupId, candidateId);
+      return res.data;
+    },
+    enabled: !!groupId && !!candidateId,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useCreateCoverCandidate(groupId) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (dto) => {
       const res = await coverVotingApi.create(groupId, dto);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: coverCandidatesKey(groupId) });
+    },
+  });
+}
+
+export function useUpdateCoverCandidate(groupId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }) => {
+      const res = await coverVotingApi.update(groupId, id, dto);
       return res.data;
     },
     onSuccess: () => {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupDetail } from '../features/groups/hooks/useGroups';
-import { useGroupBooks } from '../features/books/hooks/useBooks';
+import { useGroupBooks, useDeleteBook } from '../features/books/hooks/useBooks';
 import { useMe } from '../features/auth/hooks/useAuth';
 import { SPEC_LABEL } from '../features/books/lib/bookLabels';
 
@@ -14,19 +14,19 @@ const STATUS_INFO = {
 };
 
 const BOOK_TYPE_LABEL = {
-  GROUP: '단체',
+  SHARED: '단체',
   PERSONAL: '개인',
 };
 
 const FILTERS = [
   { key: 'all', label: '전체' },
-  { key: 'GROUP', label: '단체 포토북' },
+  { key: 'SHARED', label: '단체 포토북' },
   { key: 'PERSONAL', label: '개인 포토북' },
 ];
 
 function BookCoverThumb({ book }) {
   const initial = book.title?.[0] ?? '?';
-  const isPersonal = book.type === 'PERSONAL';
+  const isPersonal = book.bookType === 'PERSONAL';
   return (
     <div className={`w-full aspect-[3/4] rounded-xl overflow-hidden flex items-center justify-center border border-warm-border ${isPersonal ? 'bg-gradient-to-br from-blue-50 to-indigo-50' : 'bg-gradient-to-br from-brand/15 to-brand/5'}`}>
       {book.coverThumbnailUrl ? (
@@ -40,10 +40,11 @@ function BookCoverThumb({ book }) {
   );
 }
 
-function BookCard({ book, navigate }) {
+function BookCard({ book, navigate, onDelete }) {
   const info = STATUS_INFO[book.status] ?? { label: book.status, cls: 'bg-gray-100 text-gray-600' };
   const specLabel = SPEC_LABEL[book.bookSpecUid] ?? book.bookSpecUid;
-  const isPersonal = book.type === 'PERSONAL';
+  const isPersonal = book.bookType === 'PERSONAL';
+  const canDelete = book.status === 'DRAFT' || book.status === 'FAILED';
 
   const handleClick = () => {
     if (book.status === 'DRAFT') {
@@ -72,9 +73,9 @@ function BookCard({ book, navigate }) {
       <div className="px-3 pb-3 flex flex-col flex-1">
         {/* Type + status row */}
         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-          {book.type && (
+          {book.bookType && (
             <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide ${isPersonal ? 'bg-indigo-50 text-indigo-600' : 'bg-brand/10 text-brand'}`}>
-              {BOOK_TYPE_LABEL[book.type] ?? book.type}
+              {BOOK_TYPE_LABEL[book.bookType] ?? book.bookType}
             </span>
           )}
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${info.cls}`}>
@@ -105,13 +106,15 @@ function BookCard({ book, navigate }) {
         {/* Actions */}
         <div className="mt-2.5 flex gap-1.5">
           {book.status === 'DRAFT' && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); navigate(`/books/${book.id}/editor`); }}
-              className="flex-1 h-8 text-[12px] font-semibold bg-brand text-white rounded-full hover:bg-brand-hover transition-colors"
-            >
-              이어서 편집
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); navigate(`/books/${book.id}/editor`); }}
+                className="flex-1 h-8 text-[12px] font-semibold bg-brand text-white rounded-full hover:bg-brand-hover transition-colors"
+              >
+                이어서 편집
+              </button>
+            </>
           )}
           {book.status === 'PROCESSING' && (
             <div className="flex-1 h-8 flex items-center justify-center gap-1.5 bg-warm-bg rounded-full border border-warm-border">
@@ -146,6 +149,23 @@ function BookCard({ book, navigate }) {
               주문 현황
             </button>
           )}
+          {canDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`"${book.title}" 포토북을 삭제할까요? 이 작업은 되돌릴 수 없어요.`)) {
+                  onDelete?.(book.id);
+                }
+              }}
+              aria-label="포토북 삭제"
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-warm-border text-ink-muted hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a2 2 0 012-2h4a2 2 0 012 2v3" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -158,6 +178,15 @@ export function BookListPage() {
   const { data: group, isLoading: groupLoading } = useGroupDetail(Number(groupId));
   const { data: books, isLoading: booksLoading, isError } = useGroupBooks(Number(groupId));
   const { data: me } = useMe();
+  const deleteBook = useDeleteBook(Number(groupId));
+  const handleDelete = (bookId) => {
+    deleteBook.mutate(bookId, {
+      onError: (err) => {
+        const msg = err?.response?.data?.error?.message || '삭제에 실패했습니다';
+        window.alert(msg);
+      },
+    });
+  };
 
   const [activeFilter, setActiveFilter] = useState('all');
 
@@ -167,7 +196,7 @@ export function BookListPage() {
   const bookList = books ?? [];
   const filteredBooks = activeFilter === 'all'
     ? bookList
-    : bookList.filter((b) => b.type === activeFilter);
+    : bookList.filter((b) => b.bookType === activeFilter);
 
   if (isLoading) {
     return (
@@ -242,7 +271,7 @@ export function BookListPage() {
                 {f.label}
                 {f.key !== 'all' && (
                   <span className="ml-1.5 text-[11px] text-ink-muted font-normal">
-                    {bookList.filter((b) => b.type === f.key).length}
+                    {bookList.filter((b) => b.bookType === f.key).length}
                   </span>
                 )}
               </button>
@@ -276,7 +305,7 @@ export function BookListPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
             {filteredBooks.map((book) => (
-              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} />
+              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} onDelete={handleDelete} />
             ))}
           </div>
         )}
