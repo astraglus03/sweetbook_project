@@ -753,74 +753,6 @@ export class BooksService {
       (t) => String(t.theme ?? '') === book.theme,
     );
 
-    const buildInfo = async (t: Record<string, unknown>) => {
-      const tUid = String(t.templateUid ?? '');
-      const thumbs = t.thumbnails as Record<string, string> | undefined;
-      try {
-        const detail = (await this.sweetbookApiService.getTemplateDetail(
-          tUid,
-        )) as {
-          parameters?: {
-            definitions?: Record<
-              string,
-              { binding: string; required: boolean; description: string }
-            >;
-          };
-          layout?: {
-            elements?: Array<{
-              element_id: string;
-              type: string;
-              position: { x: number; y: number };
-              width: number;
-              height: number;
-              fileName?: string;
-              text?: string;
-            }>;
-            backgroundColor?: string;
-          };
-        };
-        const defs = detail?.parameters?.definitions ?? {};
-        const elements = (detail?.layout?.elements ?? []).map((el) => ({
-          id: el.element_id,
-          type: el.type,
-          x: el.position?.x ?? 0,
-          y: el.position?.y ?? 0,
-          width: el.width ?? 0,
-          height: el.height ?? 0,
-          variable: this.extractVariable(el.fileName ?? el.text ?? ''),
-        }));
-
-        return {
-          templateUid: tUid,
-          templateName: String(t.templateName ?? ''),
-          templateKind: String(t.templateKind ?? ''),
-          thumbnail: thumbs?.layout ?? null,
-          parameters: Object.fromEntries(
-            Object.entries(defs).map(([k, v]) => [
-              k,
-              {
-                binding: v.binding,
-                required: v.required,
-                description: v.description,
-              },
-            ]),
-          ),
-          elements,
-          bgColor: detail?.layout?.backgroundColor ?? '#FFFFFFFF',
-        };
-      } catch {
-        return {
-          templateUid: tUid,
-          templateName: String(t.templateName ?? ''),
-          templateKind: String(t.templateKind ?? ''),
-          thumbnail: thumbs?.layout ?? null,
-          parameters: {},
-          elements: [],
-          bgColor: '#FFFFFFFF',
-        };
-      }
-    };
-
     const coverTemplates = themeTemplates.filter(
       (t) => String(t.templateKind ?? '') === 'cover',
     );
@@ -829,11 +761,95 @@ export class BooksService {
     );
 
     const [covers, contents] = await Promise.all([
-      Promise.all(coverTemplates.map(buildInfo)),
-      Promise.all(contentTemplates.map(buildInfo)),
+      Promise.all(coverTemplates.map((t) => this.enrichTemplate(t))),
+      Promise.all(contentTemplates.map((t) => this.enrichTemplate(t))),
     ]);
 
     return { cover: covers, content: contents };
+  }
+
+  async getCoverTemplates(bookSpecUid: string) {
+    const allTemplates =
+      await this.sweetbookApiService.getTemplates(bookSpecUid);
+    const templateList = (
+      Array.isArray(allTemplates) ? allTemplates : []
+    ) as Array<Record<string, unknown>>;
+
+    const coverTemplates = templateList.filter(
+      (t) => String(t.templateKind ?? '') === 'cover',
+    );
+
+    return Promise.all(coverTemplates.map((t) => this.enrichTemplate(t)));
+  }
+
+  private async enrichTemplate(t: Record<string, unknown>) {
+    const tUid = String(t.templateUid ?? '');
+    const thumbs = t.thumbnails as Record<string, string> | undefined;
+    try {
+      const detail = (await this.sweetbookApiService.getTemplateDetail(
+        tUid,
+      )) as {
+        parameters?: {
+          definitions?: Record<
+            string,
+            { binding: string; required: boolean; description: string }
+          >;
+        };
+        layout?: {
+          elements?: Array<{
+            element_id: string;
+            type: string;
+            position: { x: number; y: number };
+            width: number;
+            height: number;
+            fileName?: string;
+            text?: string;
+          }>;
+          backgroundColor?: string;
+        };
+      };
+      const defs = detail?.parameters?.definitions ?? {};
+      const elements = (detail?.layout?.elements ?? []).map((el) => ({
+        id: el.element_id,
+        type: el.type,
+        x: el.position?.x ?? 0,
+        y: el.position?.y ?? 0,
+        width: el.width ?? 0,
+        height: el.height ?? 0,
+        variable: this.extractVariable(el.fileName ?? el.text ?? ''),
+      }));
+
+      return {
+        templateUid: tUid,
+        templateName: String(t.templateName ?? ''),
+        templateKind: String(t.templateKind ?? ''),
+        theme: String(t.theme ?? ''),
+        thumbnail: thumbs?.layout ?? null,
+        parameters: Object.fromEntries(
+          Object.entries(defs).map(([k, v]) => [
+            k,
+            {
+              binding: v.binding,
+              required: v.required,
+              description: v.description,
+            },
+          ]),
+        ),
+        elements,
+        bgColor: detail?.layout?.backgroundColor ?? '#FFFFFFFF',
+      };
+    } catch {
+      return {
+        templateUid: tUid,
+        templateName: String(t.templateName ?? ''),
+        templateKind: String(t.templateKind ?? ''),
+        theme: String(t.theme ?? ''),
+        thumbnail: thumbs?.layout ?? null,
+        parameters: {},
+        elements: [],
+        bgColor: '#FFFFFFFF',
+      };
+    }
   }
 
   private extractVariable(str: string): string | null {

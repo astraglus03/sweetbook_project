@@ -36,6 +36,18 @@ export function useTemplates(bookSpecUid) {
   });
 }
 
+export function useCoverTemplates(bookSpecUid) {
+  return useQuery({
+    queryKey: ['books', 'cover-templates', bookSpecUid],
+    queryFn: async () => {
+      const res = await booksApi.getCoverTemplates(bookSpecUid);
+      return res.data;
+    },
+    enabled: !!bookSpecUid,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
 export function useGroupBooks(groupId) {
   return useQuery({
     queryKey: ['books', 'group', groupId],

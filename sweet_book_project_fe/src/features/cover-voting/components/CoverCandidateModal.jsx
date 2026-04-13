@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePhotos } from '../../photos/hooks/usePhotos';
-import { useTemplates } from '../../books/hooks/useBooks';
+import { useCoverTemplates } from '../../books/hooks/useBooks';
 import { CoverComposer } from '../../books/components/CoverComposer';
 import { useCreateCoverCandidate } from '../hooks/useCoverVoting';
 
@@ -13,8 +13,8 @@ export function CoverCandidateModal({ groupId, onClose }) {
   const { data: photoData, isLoading: photosLoading } = usePhotos(groupId, { limit: 100 });
   const photos = photoData?.photos ?? [];
 
-  const { data: templatesRaw, isLoading: templatesLoading } = useTemplates(DEFAULT_BOOK_SPEC_UID);
-  // useTemplates returns a flat list; CoverComposer filters by category === 'cover'
+  const { data: templatesRaw, isLoading: templatesLoading } = useCoverTemplates(DEFAULT_BOOK_SPEC_UID);
+  // useCoverTemplates returns enriched cover-only list (parameters.definitions + elements included)
   const templateList = Array.isArray(templatesRaw) ? templatesRaw : [];
 
   const createCandidate = useCreateCoverCandidate(groupId);

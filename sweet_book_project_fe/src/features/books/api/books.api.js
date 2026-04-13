@@ -3,6 +3,7 @@ import { api } from '../../../lib/axios';
 export const booksApi = {
   getSpecs: () => api.get('/books/specs'),
   getTemplates: (bookSpecUid) => api.get(`/books/specs/${bookSpecUid}/templates`),
+  getCoverTemplates: (bookSpecUid) => api.get(`/books/specs/${bookSpecUid}/cover-templates`),
   getThemes: (bookSpecUid) => api.get(`/books/specs/${bookSpecUid}/themes`),
   createBook: (groupId, payload) => api.post(`/books/groups/${groupId}`, payload),
   getGroupBooks: (groupId) => api.get(`/books/groups/${groupId}`),
