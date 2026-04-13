@@ -185,13 +185,14 @@ export class GroupsService {
     }
 
     const memberIds = group.members.map((m) => m.userId);
-    const [photoCounts, anchorCount] = await Promise.all([
+    const [photoCounts, anchorCount, uploadCountByUserId] = await Promise.all([
       this.countPhotosByGroupIds([group.id]),
       memberIds.length > 0
         ? this.faceAnchorRepository.count({
             where: { groupId, userId: In(memberIds) },
           })
         : Promise.resolve(0),
+      this.countPhotosByUploader(group.id),
     ]);
     const unregisteredFaceCount = group.members.length - anchorCount;
 
@@ -199,7 +200,23 @@ export class GroupsService {
       group,
       photoCounts.get(group.id) ?? 0,
       unregisteredFaceCount,
+      uploadCountByUserId,
     );
+  }
+
+  private async countPhotosByUploader(
+    groupId: number,
+  ): Promise<Map<number, number>> {
+    const rows = await this.photoRepository
+      .createQueryBuilder('p')
+      .select('p.uploaderId', 'uploaderId')
+      .addSelect('COUNT(p.id)', 'count')
+      .where('p.groupId = :groupId AND p.uploaderId IS NOT NULL', { groupId })
+      .groupBy('p.uploaderId')
+      .getRawMany<{ uploaderId: number; count: string }>();
+    const map = new Map<number, number>();
+    for (const r of rows) map.set(Number(r.uploaderId), Number(r.count));
+    return map;
   }
 
   async updateGroup(

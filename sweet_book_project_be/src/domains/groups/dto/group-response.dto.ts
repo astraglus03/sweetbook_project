@@ -26,14 +26,17 @@ export class GroupMemberResponseDto {
   @ApiProperty()
   joinedAt: Date;
 
-  static from(member: GroupMember): GroupMemberResponseDto {
+  static from(
+    member: GroupMember,
+    uploadCountOverride?: number,
+  ): GroupMemberResponseDto {
     const dto = new GroupMemberResponseDto();
     dto.id = member.id;
     dto.userId = member.userId;
     dto.userName = member.user?.name ?? '';
     dto.userAvatarUrl = member.user?.avatarUrl ?? null;
     dto.role = member.role;
-    dto.uploadCount = member.uploadCount;
+    dto.uploadCount = uploadCountOverride ?? member.uploadCount ?? 0;
     dto.joinedAt = member.joinedAt;
     return dto;
   }
@@ -117,11 +120,12 @@ export class GroupDetailResponseDto extends GroupResponseDto {
     group: Group,
     photoCount?: number,
     unregisteredFaceCount?: number,
+    uploadCountByUserId?: Map<number, number>,
   ): GroupDetailResponseDto {
     const dto = new GroupDetailResponseDto();
     Object.assign(dto, GroupResponseDto.from(group, undefined, photoCount));
     dto.members = (group.members ?? []).map((m) =>
-      GroupMemberResponseDto.from(m),
+      GroupMemberResponseDto.from(m, uploadCountByUserId?.get(m.userId)),
     );
     dto.unregisteredFaceCount = unregisteredFaceCount ?? 0;
     return dto;
