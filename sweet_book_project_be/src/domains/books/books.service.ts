@@ -124,12 +124,17 @@ export class BooksService {
     return BookResponseDto.from(updated);
   }
 
-  async getBook(bookId: number): Promise<BookResponseDto> {
+  async getBook(bookId: number, userId: number): Promise<BookResponseDto> {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     return BookResponseDto.from(book);
   }
 
-  async getGroupBooks(groupId: number): Promise<BookResponseDto[]> {
+  async getGroupBooks(
+    groupId: number,
+    userId: number,
+  ): Promise<BookResponseDto[]> {
+    await this.verifyMember(groupId, userId);
     const books = await this.bookRepository.find({
       where: { groupId },
       order: { createdAt: 'DESC' },
@@ -571,8 +576,9 @@ export class BooksService {
     return Math.min(target, pageMax);
   }
 
-  async getBookPages(bookId: number) {
+  async getBookPages(bookId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     const pages = await this.bookPageRepository.find({
       where: { bookId },
       relations: ['photo'],
@@ -698,8 +704,9 @@ export class BooksService {
     await this.bookRepository.save(book);
   }
 
-  async getCover(bookId: number) {
+  async getCover(bookId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     return {
       coverTemplateUid: book.coverTemplateUid ?? null,
       coverParams: book.coverParams ?? {},
@@ -730,8 +737,9 @@ export class BooksService {
     return { shareCode: saved.shareCode!, isShared: saved.isShared };
   }
 
-  async getAvailableTemplates(bookId: number) {
+  async getAvailableTemplates(bookId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     if (!book.theme) return { cover: [], content: [] };
 
     const allTemplates = await this.sweetbookApiService.getTemplates(
@@ -833,8 +841,9 @@ export class BooksService {
     return match ? match[1] : null;
   }
 
-  async getTemplateLayout(bookId: number) {
+  async getTemplateLayout(bookId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     if (!book.theme) {
       return { cover: null, content: null };
     }
@@ -999,8 +1008,9 @@ export class BooksService {
     );
   }
 
-  async getBookSpecInfo(bookId: number) {
+  async getBookSpecInfo(bookId: number, userId: number) {
     const book = await this.findBookOrFail(bookId);
+    await this.verifyMember(book.groupId, userId);
     const spec = (await this.sweetbookApiService.getBookSpec(
       book.bookSpecUid,
     )) as BookSpec;
@@ -1022,6 +1032,18 @@ export class BooksService {
       shortfall: Math.max(0, spec.pageMin - currentPages),
       basePrice: isSandbox ? spec.sandboxPriceBase : spec.priceBase,
     };
+  }
+
+  private async verifyMember(groupId: number, userId: number): Promise<void> {
+    const member = await this.groupMemberRepository.findOne({
+      where: { groupId, userId },
+    });
+    if (!member) {
+      throw new ForbiddenException(
+        'GROUP_NOT_MEMBER',
+        '모임 멤버만 접근할 수 있어요',
+      );
+    }
   }
 
   private async findBookOrFail(bookId: number): Promise<Book> {

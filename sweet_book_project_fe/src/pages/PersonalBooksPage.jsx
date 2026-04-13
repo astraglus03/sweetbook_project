@@ -7,6 +7,7 @@ import {
   useGeneratePersonalBooksForGroup,
   usePersonalBookJob,
 } from '../features/books/personal/hooks/usePersonalBook';
+import { useFaceModelHealth } from '../features/photos/hooks/useFaceModelHealth';
 
 export function PersonalBooksPage() {
   const { groupId } = useParams();
@@ -17,6 +18,8 @@ export function PersonalBooksPage() {
   const { data: book, isLoading } = useMyPersonalBook(numGroupId);
   const generateMe = useGeneratePersonalBookForMe(numGroupId);
   const generateAll = useGeneratePersonalBooksForGroup(numGroupId);
+  const { data: modelHealth } = useFaceModelHealth();
+  const modelReady = modelHealth?.ready === true;
 
   const [feedback, setFeedback] = useState(null);
   const [jobId, setJobId] = useState(null);
@@ -94,6 +97,11 @@ export function PersonalBooksPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 lg:px-8 py-8 space-y-6">
+        {!modelReady && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            얼굴 인식 모델 준비 중이에요. 잠시 후 다시 시도해주세요.
+          </div>
+        )}
         {!anchor && (
           <div className="bg-white rounded-xl border border-warm-border p-8 text-center">
             <div className="text-5xl mb-4">👤</div>
@@ -200,7 +208,7 @@ export function PersonalBooksPage() {
           </p>
           <button
             onClick={handleGenerateAll}
-            disabled={generateAll.isPending || jobRunning}
+            disabled={generateAll.isPending || jobRunning || !modelReady}
             className="w-full border border-warm-border rounded-xl py-3 font-semibold text-ink hover:bg-[#FAF7F2] disabled:opacity-50"
           >
             {jobRunning

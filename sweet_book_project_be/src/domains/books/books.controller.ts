@@ -58,10 +58,10 @@ export class BooksController {
   @Get('groups/:groupId')
   @ApiOperation({ summary: '그룹 포토북 목록 조회' })
   getGroupBooks(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
-    return this.booksService.getGroupBooks(groupId);
+    return this.booksService.getGroupBooks(groupId, user.id);
   }
 
   @Get('my')
@@ -73,19 +73,19 @@ export class BooksController {
   @Get(':bookId')
   @ApiOperation({ summary: '포토북 상세 조회' })
   getBook(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getBook(bookId);
+    return this.booksService.getBook(bookId, user.id);
   }
 
   @Get(':bookId/pages')
   @ApiOperation({ summary: '포토북 페이지 목록 조회' })
   getBookPages(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getBookPages(bookId);
+    return this.booksService.getBookPages(bookId, user.id);
   }
 
   @Post(':bookId/pages')
@@ -124,37 +124,37 @@ export class BooksController {
     summary: '포토북 테마의 사용 가능한 내지 템플릿 목록 (레이아웃 포함)',
   })
   getAvailableTemplates(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getAvailableTemplates(bookId);
+    return this.booksService.getAvailableTemplates(bookId, user.id);
   }
 
   @Get(':bookId/template-layout')
   @ApiOperation({ summary: '포토북 테마의 content/cover 템플릿 레이아웃 조회' })
   getTemplateLayout(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getTemplateLayout(bookId);
+    return this.booksService.getTemplateLayout(bookId, user.id);
   }
 
   @Get(':bookId/spec-info')
   @ApiOperation({ summary: '포토북 판형 스펙 + 현재 페이지 수 조회' })
   getBookSpecInfo(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getBookSpecInfo(bookId);
+    return this.booksService.getBookSpecInfo(bookId, user.id);
   }
 
   @Get(':bookId/cover')
   @ApiOperation({ summary: '포토북 표지 정보 조회' })
   getCover(
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
     @Param('bookId', ParseIntPipe) bookId: number,
   ) {
-    return this.booksService.getCover(bookId);
+    return this.booksService.getCover(bookId, user.id);
   }
 
   @Post(':bookId/cover')

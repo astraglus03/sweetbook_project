@@ -22,6 +22,7 @@ import { WebhooksModule } from './domains/webhooks/webhooks.module';
 import { ActivitiesModule } from './domains/activities/activities.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
+import { FaceApiModule } from './external/face-api/face-api.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { OpenAiModule } from './external/openai/openai.module';
     ActivitiesModule,
     SweetbookModule,
     OpenAiModule,
+    FaceApiModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
