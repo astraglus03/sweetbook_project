@@ -1,21 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { CoverCandidate } from './entities/cover-candidate.entity';
 import { CoverVote } from './entities/cover-vote.entity';
 import { GroupMember } from '../groups/entities/group-member.entity';
-import { Photo } from '../photos/entities/photo.entity';
 import { CreateCoverCandidateDto } from './dto/create-cover-candidate.dto';
 import { CoverCandidateResponseDto } from './dto/cover-candidate-response.dto';
-import { ForbiddenException, NotFoundException, ValidationException } from '../../common/exceptions';
+import { ForbiddenException, NotFoundException } from '../../common/exceptions';
 import { ActivitiesService } from '../activities/activities.service';
 import { GroupActivityType } from '../activities/entities/group-activity.entity';
 
 @Injectable()
 export class CoverVotingService {
   private readonly logger = new Logger(CoverVotingService.name);
-  private readonly baseUrl: string;
 
   constructor(
     @InjectRepository(CoverCandidate)
@@ -24,13 +21,8 @@ export class CoverVotingService {
     private readonly voteRepository: Repository<CoverVote>,
     @InjectRepository(GroupMember)
     private readonly groupMemberRepository: Repository<GroupMember>,
-    @InjectRepository(Photo)
-    private readonly photoRepository: Repository<Photo>,
-    private readonly configService: ConfigService,
     private readonly activitiesService: ActivitiesService,
-  ) {
-    this.baseUrl = this.configService.get<string>('BASE_URL', 'http://localhost:3000');
-  }
+  ) {}
 
   private async verifyMember(groupId: number, userId: number): Promise<GroupMember> {
     const member = await this.groupMemberRepository.findOne({ where: { groupId, userId } });
@@ -47,10 +39,6 @@ export class CoverVotingService {
     }
   }
 
-  private buildPhotoUrl(photo: Photo): string {
-    return `${this.baseUrl}/uploads/photos/${photo.groupId}/medium/${photo.filename}`;
-  }
-
   async create(
     groupId: number,
     userId: number,
@@ -58,26 +46,20 @@ export class CoverVotingService {
   ): Promise<CoverCandidateResponseDto> {
     await this.verifyMember(groupId, userId);
 
-    const photo = await this.photoRepository.findOne({
-      where: { id: dto.photoId, groupId },
-      relations: ['uploader'],
-    });
-    if (!photo) {
-      throw new NotFoundException('PHOTO_NOT_FOUND', '해당 그룹의 사진을 찾을 수 없습니다');
-    }
-
     const candidate = this.candidateRepository.create({
       groupId,
       creatorUserId: userId,
-      photoId: dto.photoId,
-      title: dto.title,
-      subtitle: dto.subtitle ?? null,
       templateUid: dto.templateUid,
       bookSpecUid: dto.bookSpecUid,
+      params: dto.params,
+      // legacy columns — left null for new rows
+      photoId: null,
+      title: null,
+      subtitle: null,
     });
     const saved = await this.candidateRepository.save(candidate);
 
-    return this.toDto(saved, photo, userId, 0, false);
+    return this.toDto(saved, userId, 0, false);
   }
 
   async list(groupId: number, userId: number): Promise<CoverCandidateResponseDto[]> {
@@ -86,13 +68,11 @@ export class CoverVotingService {
     const candidates = await this.candidateRepository
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.creator', 'creator')
-      .leftJoinAndSelect('c.photo', 'photo')
       .leftJoin('c.votes', 'vote')
       .addSelect('COUNT(vote.id)', 'voteCount')
       .where('c.groupId = :groupId', { groupId })
       .groupBy('c.id')
       .addGroupBy('creator.id')
-      .addGroupBy('photo.id')
       .orderBy('"voteCount"', 'DESC')
       .addOrderBy('c.createdAt', 'ASC')
       .getRawAndEntities();
@@ -111,7 +91,7 @@ export class CoverVotingService {
     return candidates.entities.map((c) => {
       const voteCount = rawMap.get(c.id) ?? 0;
       const votedByMe = myVotedIds.has(c.id);
-      return this.toDto(c, c.photo, userId, voteCount, votedByMe);
+      return this.toDto(c, userId, voteCount, votedByMe);
     });
   }
 
@@ -165,7 +145,7 @@ export class CoverVotingService {
         groupId,
         actorUserId: userId,
         type: 'COVER_VOTED' as GroupActivityType,
-        payload: { candidateId, title: candidate.title },
+        payload: { candidateId },
       });
     }
 
@@ -177,7 +157,7 @@ export class CoverVotingService {
     groupId: number,
     candidateId: number,
     userId: number,
-  ): Promise<{ photoId: number; title: string; subtitle: string | null; templateUid: string; bookSpecUid: string }> {
+  ): Promise<{ templateUid: string; bookSpecUid: string; params: Record<string, string | number> }> {
     await this.verifyOwner(groupId, userId);
 
     const candidate = await this.candidateRepository.findOne({
@@ -191,21 +171,18 @@ export class CoverVotingService {
       groupId,
       actorUserId: userId,
       type: 'COVER_CONFIRMED' as GroupActivityType,
-      payload: { candidateId, title: candidate.title },
+      payload: { candidateId },
     });
 
     return {
-      photoId: candidate.photoId,
-      title: candidate.title,
-      subtitle: candidate.subtitle,
       templateUid: candidate.templateUid,
       bookSpecUid: candidate.bookSpecUid,
+      params: candidate.params ?? {},
     };
   }
 
   private toDto(
     candidate: CoverCandidate,
-    photo: Photo,
     _userId: number,
     voteCount: number,
     votedByMe: boolean,
@@ -215,10 +192,7 @@ export class CoverVotingService {
     dto.groupId = candidate.groupId;
     dto.creatorUserId = candidate.creatorUserId;
     dto.creatorName = candidate.creator?.name ?? '알 수 없음';
-    dto.photoId = candidate.photoId;
-    dto.photoUrl = this.buildPhotoUrl(photo);
-    dto.title = candidate.title;
-    dto.subtitle = candidate.subtitle;
+    dto.params = candidate.params ?? {};
     dto.templateUid = candidate.templateUid;
     dto.bookSpecUid = candidate.bookSpecUid;
     dto.voteCount = voteCount;

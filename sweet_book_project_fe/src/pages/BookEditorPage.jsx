@@ -33,6 +33,7 @@ const ZOOM_MAX = 1.5;
 const ZOOM_STEP = 0.1;
 
 import { TemplateCanvas } from '../features/books/components/TemplateCanvas';
+import { CoverComposer } from '../features/books/components/CoverComposer';
 
 // ─── Template Picker Modal ────────────────────────────────
 
@@ -284,16 +285,12 @@ export function BookEditorPage() {
   };
 
   const handlePhotoSelect = (photo) => {
-    if (showPhotoPicker) {
-      if (coverMode) {
-        setCoverParams((prev) => ({ ...prev, [showPhotoPicker]: String(photo.id) }));
-      } else if (currentPage) {
-        handleParamChange(showPhotoPicker, String(photo.id));
-        const firstPhotoKey = Object.entries(currentTemplate?.parameters ?? {})
-          .find(([, v]) => v.binding === 'file')?.[0];
-        if (showPhotoPicker === firstPhotoKey) {
-          updatePage.mutate({ pageId: currentPage.id, photoId: photo.id });
-        }
+    if (showPhotoPicker && currentPage) {
+      handleParamChange(showPhotoPicker, String(photo.id));
+      const firstPhotoKey = Object.entries(currentTemplate?.parameters ?? {})
+        .find(([, v]) => v.binding === 'file')?.[0];
+      if (showPhotoPicker === firstPhotoKey) {
+        updatePage.mutate({ pageId: currentPage.id, photoId: photo.id });
       }
     }
     setShowPhotoPicker(null);
@@ -597,48 +594,24 @@ export function BookEditorPage() {
         {/* Center: Template Canvas */}
         <div className="flex-1 flex flex-col items-center p-4 lg:p-6 bg-warm-bg overflow-y-auto">
           {/* Cover mode */}
-          {coverMode && resolvedCoverTemplate ? (
+          {coverMode ? (
             <>
               <div style={{ width: `${Math.round(700 * zoom)}px`, maxWidth: '100%' }} className="mb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] text-ink-sub">
-                    <span className="font-semibold text-brand">표지</span>
-                    {' · '}<span className="font-medium text-ink">{resolvedCoverTemplate.templateName}</span>
-                  </p>
-                  {resolvedCoverTemplate.thumbnail && (
-                    <details className="text-[10px]">
-                      <summary className="cursor-pointer text-brand hover:text-brand-hover font-medium select-none">
-                        예시 보기
-                      </summary>
-                      <div className="mt-2 rounded-lg border border-warm-border overflow-hidden shadow-sm bg-white">
-                        <img src={resolvedCoverTemplate.thumbnail} alt="표지 예시" className="w-full h-auto" />
-                      </div>
-                    </details>
-                  )}
-                </div>
-                <TemplateCanvas
-                  template={resolvedCoverTemplate}
+                <p className="text-[11px] text-ink-sub mb-2">
+                  <span className="font-semibold text-brand">표지 구성</span>
+                </p>
+                <CoverComposer
+                  groupId={groupId}
+                  templateUid={coverTemplateUid}
                   params={coverParams}
-                  photos={photos}
-                  isEditable={isEditable}
-                  templateKind="cover"
-                  onParamChange={(key, val) => {
-                    const def = resolvedCoverTemplate.parameters?.[key];
-                    if (def?.binding === 'file') {
-                      setShowPhotoPicker(key);
-                    } else {
-                      setCoverParams((prev) => ({ ...prev, [key]: val }));
-                    }
+                  onChange={(newTemplateUid, newParams) => {
+                    setCoverTemplateUid(newTemplateUid);
+                    setCoverParams(newParams);
                   }}
+                  availableTemplates={coverTemplates}
+                  photos={photos}
                 />
               </div>
-              {isEditable && (
-                <button type="button"
-                  onClick={() => setShowTemplatePicker({ type: 'COVER' })}
-                  className="h-8 px-5 text-xs font-medium text-brand border border-brand rounded-full hover:bg-brand/5 transition-colors">
-                  표지 템플릿 변경
-                </button>
-              )}
             </>
           ) : currentPage && currentTemplate ? (
             <>
