@@ -39,6 +39,14 @@ export class BooksController {
     return this.booksService.getTemplates(uid);
   }
 
+  @Get('specs/:uid/cover-templates')
+  @ApiOperation({
+    summary: '판형별 표지 템플릿 목록 조회 (enriched — parameters.definitions + elements 포함, theme 필터 없음)',
+  })
+  getCoverTemplates(@CurrentUser() _user: User, @Param('uid') uid: string) {
+    return this.booksService.getCoverTemplates(uid);
+  }
+
   @Get('specs/:uid/themes')
   @ApiOperation({ summary: '판형별 사용 가능한 테마 목록 조회' })
   getThemes(@CurrentUser() _user: User, @Param('uid') uid: string) {
