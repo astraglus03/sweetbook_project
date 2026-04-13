@@ -329,16 +329,30 @@ export function GroupDetailPage() {
           </div>
         )}
         {activeTab === 'members' && (
-          <MemberList
-            groupId={Number(groupId)}
-            members={group.members ?? []}
-            currentUserId={me?.id}
-            ownerId={group.ownerId}
-            inviteCode={group.inviteCode}
-          />
+          <div>
+            <MemberList
+              groupId={Number(groupId)}
+              members={group.members ?? []}
+              currentUserId={me?.id}
+              ownerId={group.ownerId}
+              inviteCode={group.inviteCode}
+            />
+          </div>
         )}
         {activeTab === 'books' && (
           <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate(`/groups/${groupId}/books`)}
+                className="text-sm font-medium text-brand hover:underline flex items-center gap-1"
+              >
+                전체 보기
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
             <div className="bg-gradient-to-r from-brand/10 to-brand/5 border border-brand/30 rounded-xl p-5 flex items-center justify-between gap-4">
               <div>
                 <p className="font-bold text-ink flex items-center gap-1">

@@ -26,6 +26,7 @@ import {
   SharedViewerPage,
   NotFoundPage,
   ActivityFeedPage,
+  BookListPage,
 } from './RouteSuspense';
 
 export const router = createBrowserRouter([
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: '/groups/new', element: <S><CreateGroupPage /></S> },
       { path: '/groups/:groupId', element: <S><GroupDetailPage /></S> },
       { path: '/groups/:groupId/activity', element: <S><ActivityFeedPage /></S> },
+      { path: '/groups/:groupId/books', element: <S><BookListPage /></S> },
       { path: '/profile', element: <S><ProfilePage /></S> },
       { path: '/notifications', element: <S><NotificationsPage /></S> },
       { path: '/groups/:groupId/face-anchor', element: <S><FaceAnchorSetupPage /></S> },

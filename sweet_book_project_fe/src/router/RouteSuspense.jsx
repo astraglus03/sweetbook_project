@@ -21,6 +21,7 @@ export const FaceAnchorSetupPage = lazy(() => import('../pages/FaceAnchorSetupPa
 export const PersonalBooksPage = lazy(() => import('../pages/PersonalBooksPage').then((m) => ({ default: m.PersonalBooksPage })));
 export const PersonalBookReviewPage = lazy(() => import('../pages/PersonalBookReviewPage').then((m) => ({ default: m.PersonalBookReviewPage })));
 export const ActivityFeedPage = lazy(() => import('../pages/ActivityFeedPage').then((m) => ({ default: m.ActivityFeedPage })));
+export const BookListPage = lazy(() => import('../pages/BookListPage').then((m) => ({ default: m.BookListPage })));
 
 // Default exports
 export const CreateGroupPage = lazy(() => import('../pages/CreateGroupPage'));
