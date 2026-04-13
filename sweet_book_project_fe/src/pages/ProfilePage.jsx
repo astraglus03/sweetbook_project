@@ -4,6 +4,7 @@ import { useMe, useLogout } from '../features/auth/hooks/useAuth';
 import { useMyGroups } from '../features/groups/hooks/useGroups';
 import { useThemeStore } from '../stores/theme.store';
 import { api } from '../lib/axios';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 const TABS = [
   { key: 'profile', label: '프로필', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
@@ -98,13 +99,20 @@ export default function ProfilePage() {
     });
   };
 
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawPending, setWithdrawPending] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
+
   const handleWithdraw = async () => {
-    if (!window.confirm('정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+    setWithdrawPending(true);
+    setWithdrawError('');
     try {
       await api.delete('/users/me');
       navigate('/login', { replace: true });
     } catch (err) {
-      alert(err.response?.data?.error?.message || '탈퇴에 실패했습니다');
+      setWithdrawError(err.response?.data?.error?.message || '탈퇴에 실패했습니다');
+    } finally {
+      setWithdrawPending(false);
     }
   };
 
@@ -146,7 +154,7 @@ export default function ProfilePage() {
               </button>
               <button
                 type="button"
-                onClick={handleWithdraw}
+                onClick={() => setWithdrawOpen(true)}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,7 +441,7 @@ export default function ProfilePage() {
             </button>
             <button
               type="button"
-              onClick={handleWithdraw}
+              onClick={() => setWithdrawOpen(true)}
               className="w-full text-sm text-red-400 hover:underline py-2"
             >
               회원 탈퇴
@@ -441,6 +449,18 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={withdrawOpen}
+        title="정말 탈퇴하시겠습니까?"
+        description={`이 작업은 되돌릴 수 없습니다. 참여 중인 모임/포토북은 삭제되지 않지만 프로필은 익명 처리됩니다.${withdrawError ? `\n\n${withdrawError}` : ''}`}
+        confirmLabel="탈퇴"
+        cancelLabel="취소"
+        danger
+        isPending={withdrawPending}
+        onConfirm={handleWithdraw}
+        onClose={() => setWithdrawOpen(false)}
+      />
     </div>
   );
 }

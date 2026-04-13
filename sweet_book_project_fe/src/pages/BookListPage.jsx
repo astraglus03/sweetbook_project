@@ -4,6 +4,7 @@ import { useGroupDetail } from '../features/groups/hooks/useGroups';
 import { useGroupBooks, useDeleteBook } from '../features/books/hooks/useBooks';
 import { useMe } from '../features/auth/hooks/useAuth';
 import { SPEC_LABEL } from '../features/books/lib/bookLabels';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 const STATUS_INFO = {
   DRAFT: { label: '편집 중', cls: 'bg-gray-100 text-gray-700' },
@@ -154,9 +155,7 @@ function BookCard({ book, navigate, onDelete }) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`"${book.title}" 포토북을 삭제할까요? 이 작업은 되돌릴 수 없어요.`)) {
-                  onDelete?.(book.id);
-                }
+                onDelete?.(book);
               }}
               aria-label="포토북 삭제"
               className="w-8 h-8 flex items-center justify-center rounded-full border border-warm-border text-ink-muted hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
@@ -179,11 +178,19 @@ export function BookListPage() {
   const { data: books, isLoading: booksLoading, isError } = useGroupBooks(Number(groupId));
   const { data: me } = useMe();
   const deleteBook = useDeleteBook(Number(groupId));
-  const handleDelete = (bookId) => {
-    deleteBook.mutate(bookId, {
+  const [bookToDelete, setBookToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleRequestDelete = (book) => {
+    setDeleteError('');
+    setBookToDelete(book);
+  };
+  const handleConfirmDelete = () => {
+    if (!bookToDelete) return;
+    deleteBook.mutate(bookToDelete.id, {
+      onSuccess: () => setBookToDelete(null),
       onError: (err) => {
-        const msg = err?.response?.data?.error?.message || '삭제에 실패했습니다';
-        window.alert(msg);
+        setDeleteError(err?.response?.data?.error?.message || '삭제에 실패했습니다');
       },
     });
   };
@@ -305,7 +312,7 @@ export function BookListPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
             {filteredBooks.map((book) => (
-              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} onDelete={handleDelete} />
+              <BookCard key={book.id} book={book} navigate={navigate} groupId={Number(groupId)} onDelete={handleRequestDelete} />
             ))}
           </div>
         )}
@@ -325,6 +332,21 @@ export function BookListPage() {
         </button>
       )}
 
+      <ConfirmDialog
+        open={!!bookToDelete}
+        title="포토북을 삭제할까요?"
+        description={
+          bookToDelete
+            ? `"${bookToDelete.title}" 포토북이 영구적으로 삭제됩니다.${deleteError ? `\n\n${deleteError}` : ''}`
+            : ''
+        }
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        danger
+        onConfirm={handleConfirmDelete}
+        onClose={() => setBookToDelete(null)}
+        isPending={deleteBook.isPending}
+      />
     </div>
   );
 }
