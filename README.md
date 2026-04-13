@@ -54,7 +54,7 @@ npm run dev
 ```
 
 - 서비스: https://sweetbook-be.up.railway.app
-- Swagger 문서: http://sweetbookproject-production.up.railway.app/api/docs
+- Swagger 문서: https://sweetbookproject-production.up.railway.app/api/docs
 
 ### 환경변수
 
