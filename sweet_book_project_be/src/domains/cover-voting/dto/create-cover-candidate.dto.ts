@@ -1,5 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsObject, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateCoverCandidateDto {
   @ApiProperty({
@@ -19,6 +25,24 @@ export class CreateCoverCandidateDto {
   @IsNotEmpty()
   @MaxLength(50)
   bookSpecUid: string;
+
+  @ApiPropertyOptional({
+    description: '템플릿 이름 스냅샷 (등록 시점 보존용)',
+    maxLength: 120,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  templateName?: string;
+
+  @ApiPropertyOptional({
+    description: '테마 스냅샷 (등록 시점 보존용)',
+    maxLength: 60,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  theme?: string;
 
   @ApiProperty({
     description: '슬롯별 파라미터: { [slotId]: photoId(number) | text(string) }',

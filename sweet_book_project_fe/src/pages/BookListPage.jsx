@@ -3,11 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupDetail } from '../features/groups/hooks/useGroups';
 import { useGroupBooks } from '../features/books/hooks/useBooks';
 import { useMe } from '../features/auth/hooks/useAuth';
-const SPEC_LABEL = {
-  SQUAREBOOK_HC: '정사각 하드커버',
-  PHOTOBOOK_A4_SC: 'A4 소프트커버',
-  PHOTOBOOK_A5_SC: 'A5 소프트커버',
-};
+import { SPEC_LABEL } from '../features/books/lib/bookLabels';
 
 const STATUS_INFO = {
   DRAFT: { label: '편집 중', cls: 'bg-gray-100 text-gray-700' },

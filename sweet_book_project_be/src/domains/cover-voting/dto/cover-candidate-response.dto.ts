@@ -22,6 +22,12 @@ export class CoverCandidateResponseDto {
   @ApiProperty({ description: 'Sweetbook 판형 UID' })
   bookSpecUid: string;
 
+  @ApiPropertyOptional({ description: '등록 시점의 템플릿 이름 스냅샷' })
+  templateName: string | null;
+
+  @ApiPropertyOptional({ description: '등록 시점의 테마 스냅샷' })
+  theme: string | null;
+
   @ApiProperty()
   voteCount: number;
 
