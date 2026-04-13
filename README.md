@@ -53,8 +53,8 @@ npm install
 npm run dev
 ```
 
-- 서비스: http://localhost:5173
-- Swagger 문서: http://localhost:3000/api/docs
+- 서비스: https://sweetbook-be.up.railway.app
+- Swagger 문서: http://sweetbookproject-production.up.railway.app/api/docs
 
 ### 환경변수
 
