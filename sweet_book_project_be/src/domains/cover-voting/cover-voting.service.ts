@@ -92,7 +92,7 @@ export class CoverVotingService {
       .groupBy('c.id')
       .addGroupBy('creator.id')
       .addGroupBy('photo.id')
-      .orderBy('voteCount', 'DESC')
+      .orderBy('"voteCount"', 'DESC')
       .addOrderBy('c.createdAt', 'ASC')
       .getRawAndEntities();
 
