@@ -38,12 +38,9 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const isProd = configService.get<string>('NODE_ENV') === 'production';
-  if (!isProd) {
-    app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
-      prefix: '/uploads/',
-    });
-  }
+  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   const port = Number(configService.getOrThrow<string>('PORT'));
   await app.listen(port);

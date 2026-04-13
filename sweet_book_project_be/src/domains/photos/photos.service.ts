@@ -31,10 +31,7 @@ export class PhotosService {
     private readonly configService: ConfigService,
     private readonly activitiesService: ActivitiesService,
   ) {
-    this.baseUrl = this.configService.get<string>(
-      'BASE_URL',
-      'http://localhost:3000',
-    );
+    this.baseUrl = this.configService.getOrThrow<string>('BASE_URL');
   }
 
   async uploadPhotos(

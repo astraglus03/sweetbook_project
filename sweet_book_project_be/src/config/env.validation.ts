@@ -117,6 +117,11 @@ class EnvVariables {
   @IsOptional()
   @IsString()
   OPENAI_API_KEY?: string;
+
+  // Base URL (이메일 링크/사진 URL 생성)
+  @IsNotEmpty()
+  @IsString()
+  BASE_URL: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>): EnvVariables => {

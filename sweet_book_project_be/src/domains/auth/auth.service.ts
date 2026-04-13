@@ -117,10 +117,7 @@ export class AuthService {
       'EX',
       RESET_TTL,
     );
-    const feUrl = this.configService.get<string>(
-      'CORS_ORIGIN',
-      'http://localhost:5173',
-    );
+    const feUrl = this.configService.getOrThrow<string>('CORS_ORIGIN');
     const resetLink = `${feUrl}/reset-password/${token}`;
     this.logger.log(`Password reset link: ${resetLink} (user=${user.id})`);
     // EmailService 연동 후 실제 발송
