@@ -216,7 +216,7 @@ export default function OrderPage() {
           templateKind="cover"
         />
       ) : pages?.[0] ? (
-        <img src={pages[0].mediumUrl || pages[0].thumbnailUrl} alt="표지" className="w-full h-full object-contain" />
+        <img src={pages[0].mediumUrl || pages[0].thumbnailUrl} alt="표지" className="w-full h-full object-contain" loading="lazy" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-ink-muted text-xs">표지 없음</div>
       )}

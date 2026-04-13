@@ -64,7 +64,7 @@ export default function CreateGroupPage() {
             className="flex flex-col items-center justify-center gap-2 h-[120px] bg-warm-bg border-[1.5px] border-dashed border-warm-border rounded-xl cursor-pointer hover:border-brand/50 transition-colors overflow-hidden"
           >
             {coverPreview ? (
-              <img src={coverPreview} alt="커버 미리보기" className="w-full h-full object-cover" />
+              <img src={coverPreview} alt="커버 미리보기" className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <>
                 <svg className="w-7 h-7 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">

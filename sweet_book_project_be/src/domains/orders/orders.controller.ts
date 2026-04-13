@@ -108,6 +108,15 @@ export class OrdersController {
     return this.ordersService.confirmAndPlaceOrders(orderGroupId, user.id);
   }
 
+  @Post('groups/:orderGroupId/retry')
+  @ApiOperation({ summary: '부분 실패한 주문 재시도' })
+  retryFailedOrders(
+    @CurrentUser() user: User,
+    @Param('orderGroupId', ParseIntPipe) orderGroupId: number,
+  ) {
+    return this.ordersService.retryFailedOrders(orderGroupId, user.id);
+  }
+
   @Post('groups/:orderGroupId/reject')
   @ApiOperation({ summary: '주문 수령 거절' })
   rejectOrder(

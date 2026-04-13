@@ -27,7 +27,7 @@ export interface ImportResult {
   totalPhotos: number;
   savedPhotos: number;
   matchedPhotos: number;
-  unmatchedNames: never[];
+  unmatchedNames: string[];
 }
 
 @Injectable()
@@ -111,6 +111,7 @@ export class KakaoImportService {
 
     let savedCount = 0;
     let matchedCount = 0;
+    const unmatchedSet = new Set<string>();
 
     for (const img of imagesWithName) {
       try {
@@ -131,7 +132,11 @@ export class KakaoImportService {
           }
         }
 
-        if (uploaderId) matchedCount++;
+        if (uploaderId) {
+          matchedCount++;
+        } else if (kakaoName) {
+          unmatchedSet.add(kakaoName);
+        }
 
         await this.saveImage(
           groupId,
@@ -164,7 +169,7 @@ export class KakaoImportService {
       totalPhotos: imagesWithName.length,
       savedPhotos: savedCount,
       matchedPhotos: matchedCount,
-      unmatchedNames: [],
+      unmatchedNames: [...unmatchedSet],
     };
   }
 
@@ -199,25 +204,30 @@ export class KakaoImportService {
     imageEntries: AdmZip.IZipEntry[],
     messages: ParsedPhotoMessage[],
   ): Array<{ entry: AdmZip.IZipEntry; kakaoName: string | null }> {
-    // 이미지를 timestamp로 정렬 (파일명 기반, 실패 시 header time)
-    const imagesSorted = [...imageEntries].sort((a, b) => {
-      const ta = extractImageTimestamp(a.entryName) ?? a.header.time.getTime();
-      const tb = extractImageTimestamp(b.entryName) ?? b.header.time.getTime();
-      return ta - tb;
-    });
-
-    // 메시지는 이미 시간순 (파서가 순회 순서대로 push). 혹시 모르니 정렬.
+    // timestamp 근사 매칭 (±60초). 메시지 수 ≠ 이미지 수인 경우에도 안전하게 동작.
+    const TOLERANCE_MS = 60_000;
     const messagesSorted = [...messages].sort(
       (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
     );
 
-    // 순서 매칭: 1:1로 맞춤
-    return imagesSorted.map((entry, idx) => {
-      const msg = messagesSorted[idx];
-      return {
-        entry,
-        kakaoName: msg?.uploaderName ?? null,
-      };
+    return imageEntries.map((entry) => {
+      const imgTs =
+        extractImageTimestamp(entry.entryName) ?? entry.header.time.getTime();
+
+      // 근접한 메시지 찾기 — 이진 탐색 대신 선형(수량 100장 내외)
+      let best: ParsedPhotoMessage | null = null;
+      let bestDiff = Number.POSITIVE_INFINITY;
+      for (const m of messagesSorted) {
+        const diff = Math.abs(m.timestamp.getTime() - imgTs);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = m;
+        }
+      }
+
+      const kakaoName =
+        best && bestDiff <= TOLERANCE_MS ? best.uploaderName : null;
+      return { entry, kakaoName };
     });
   }
 

@@ -388,6 +388,92 @@ export class OrdersService {
     return { orderGroupId, results };
   }
 
+  async retryFailedOrders(orderGroupId: number, userId: number) {
+    const orderGroup = await this.findOrderGroupOrFail(orderGroupId);
+
+    if (orderGroup.initiatedBy !== userId) {
+      throw new ForbiddenException(
+        'ORDER_NOT_INITIATOR',
+        '재시도는 주문을 시작한 사용자만 가능합니다',
+      );
+    }
+    if (orderGroup.status !== 'CONFIRMED') {
+      throw new ForbiddenException(
+        'ORDER_GROUP_INVALID_STATUS',
+        'CONFIRMED 상태에서만 재시도 가능합니다',
+      );
+    }
+
+    const book = await this.findBookOrFail(orderGroup.bookId);
+    if (!book.sweetbookBookUid) {
+      throw new ForbiddenException(
+        'BOOK_NOT_SYNCED',
+        '포토북이 Sweetbook에 등록되지 않았습니다',
+      );
+    }
+
+    const failedOrders = await this.orderRepository.find({
+      where: { orderGroupId, status: 'ERROR' },
+    });
+    if (failedOrders.length === 0) {
+      return { orderGroupId, retried: 0, results: [] };
+    }
+
+    const results: Array<{
+      orderId: number;
+      success: boolean;
+      error?: string;
+    }> = [];
+
+    for (const order of failedOrders) {
+      try {
+        order.status = 'SUBMITTING';
+        await this.orderRepository.save(order);
+
+        const result = await this.sweetbookApiService.createOrder({
+          items: [{ bookUid: book.sweetbookBookUid, quantity: order.quantity }],
+          shipping: {
+            recipientName: order.recipientName!,
+            recipientPhone: order.recipientPhone!,
+            postalCode: order.recipientZipCode!,
+            address1: order.recipientAddress!,
+            address2: order.recipientAddressDetail ?? undefined,
+            memo: order.memo ?? undefined,
+          },
+          externalRef: `groupbook-order-${order.id}`,
+          idempotencyKey: order.idempotencyKey,
+        });
+
+        order.sweetbookOrderUid = result.orderUid;
+        order.status = 'PAID';
+        order.orderedAt = new Date();
+        await this.orderRepository.save(order);
+
+        results.push({ orderId: order.id, success: true });
+        this.logger.log(`Retry success: order=${order.id} → ${result.orderUid}`);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        order.status = 'ERROR';
+        await this.orderRepository.save(order);
+        results.push({ orderId: order.id, success: false, error: errorMessage });
+        this.logger.error(`Retry failed: order=${order.id}: ${errorMessage}`);
+      }
+    }
+
+    // 전원 복구 시 ORDERED로 승급
+    const remaining = await this.orderRepository.count({
+      where: { orderGroupId, status: 'ERROR' },
+    });
+    if (remaining === 0) {
+      orderGroup.status = 'ORDERED';
+      await this.orderGroupRepository.save(orderGroup);
+      book.status = 'ORDERED';
+      await this.bookRepository.save(book);
+    }
+
+    return { orderGroupId, retried: failedOrders.length, results };
+  }
+
   async cancelOrder(orderId: number, userId: number, cancelReason: string) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
@@ -431,8 +517,18 @@ export class OrdersService {
       throw new NotFoundException('ORDER_NOT_FOUND', '주문을 찾을 수 없습니다');
     }
 
-    // Sweetbook에서 최신 상태 동기화
-    if (order.sweetbookOrderUid && !this.isTerminalStatus(order.status)) {
+    // 60초 쿨다운: Sweetbook Rate Limit 보호 + 폴링 남용 방지.
+    // 백그라운드 order-sync cron(30분)이 최종 정합성 보장.
+    const SYNC_COOLDOWN_MS = 60_000;
+    const freshlySynced =
+      order.updatedAt &&
+      Date.now() - order.updatedAt.getTime() < SYNC_COOLDOWN_MS;
+
+    if (
+      order.sweetbookOrderUid &&
+      !this.isTerminalStatus(order.status) &&
+      !freshlySynced
+    ) {
       try {
         const sbOrder = (await this.sweetbookApiService.getOrder(
           order.sweetbookOrderUid,

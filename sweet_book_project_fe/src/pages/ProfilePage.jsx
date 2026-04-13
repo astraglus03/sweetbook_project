@@ -195,7 +195,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-[72px] h-[72px] rounded-full bg-brand flex-shrink-0 overflow-hidden">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white">
                       {user.name?.[0]}
@@ -373,7 +373,7 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-lg bg-brand/10 flex-shrink-0 overflow-hidden flex items-center justify-center text-brand text-sm font-bold">
                             {g.coverImage ? (
-                              <img src={g.coverImage} alt="" className="w-full h-full object-cover" />
+                              <img src={g.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                               g.name?.[0] ?? '?'
                             )}
