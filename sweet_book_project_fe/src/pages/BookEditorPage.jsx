@@ -120,6 +120,94 @@ function TemplatePicker({ availableTemplates, onSelect, onClose }) {
   );
 }
 
+// ─── Bulk Photo Picker Modal (multi-select) ───────────────
+
+function BulkPhotoPicker({ photos, onConfirm, onClose }) {
+  const [selected, setSelected] = useState(new Set());
+
+  const toggle = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selected.size === photos.length) setSelected(new Set());
+    else setSelected(new Set(photos.map((p) => p.id)));
+  };
+
+  const handleConfirm = () => {
+    if (selected.size === 0) return;
+    const ordered = photos.filter((p) => selected.has(p.id));
+    onConfirm(ordered);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 border-b border-warm-border flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-ink">여러 사진 한 번에 추가</h3>
+            <p className="text-xs text-ink-sub mt-0.5">선택한 사진마다 한 페이지씩 자동 생성됩니다</p>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full hover:bg-warm-bg text-ink-sub" aria-label="닫기">✕</button>
+        </div>
+        <div className="px-4 py-2 border-b border-warm-border flex items-center justify-between bg-warm-bg/40">
+          <button type="button" onClick={handleSelectAll}
+            className="text-xs text-brand font-semibold hover:text-brand-hover">
+            {selected.size === photos.length && photos.length > 0 ? '전체 해제' : '전체 선택'}
+          </button>
+          <span className="text-xs text-ink-sub">{selected.size}장 선택됨</span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {photos.length === 0 ? (
+            <div className="text-center py-16 text-ink-muted text-sm">
+              보관함에 사진이 없습니다
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {photos.map((photo) => {
+                const isSel = selected.has(photo.id);
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => toggle(photo.id)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 relative transition-all ${
+                      isSel ? 'border-brand ring-2 ring-brand/30' : 'border-warm-border hover:border-brand/40'
+                    }`}
+                    aria-pressed={isSel}
+                  >
+                    <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" />
+                    {isSel && (
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-brand text-white text-[10px] font-bold flex items-center justify-center shadow">
+                        ✓
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-warm-border flex gap-2 justify-end">
+          <button type="button" onClick={onClose}
+            className="h-10 px-5 rounded-full text-sm text-ink-sub hover:bg-warm-bg">
+            취소
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={selected.size === 0}
+            className="h-10 px-5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover disabled:opacity-40">
+            {selected.size}장 추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Photo Picker Modal ───────────────────────────────────
 
 function PhotoPicker({ photos, onSelect, onClose, groupId }) {
@@ -211,6 +299,10 @@ export function BookEditorPage() {
   const [coverParams, setCoverParams] = useState({});
   const [coverHydrated, setCoverHydrated] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showBulkPicker, setShowBulkPicker] = useState(false);
+  const [dragFromIndex, setDragFromIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const groupId = book?.groupId;
   const { data: photosData } = usePhotos(groupId, { limit: 100 });
@@ -447,6 +539,71 @@ export function BookEditorPage() {
       onError: () => {
         alert("테스트 데이터 채우기에 실패했습니다.");
       }
+    });
+  };
+
+  // 드래그 앤 드롭 — 페이지 재정렬
+  const handleDragStart = (index) => setDragFromIndex(index);
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (dragOverIndex !== index) setDragOverIndex(index);
+  };
+  const handleDragEnd = () => {
+    setDragFromIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDrop = (toIndex) => {
+    if (dragFromIndex === null || dragFromIndex === toIndex) {
+      handleDragEnd();
+      return;
+    }
+    const pageFrom = pages[dragFromIndex];
+    const pageTo = pages[toIndex];
+    if (!pageFrom || !pageTo) {
+      handleDragEnd();
+      return;
+    }
+    // 드래그한 페이지의 pageNumber를 목적지로 이동 — 단순 스왑 (스텝별 이동은 UX 혼란)
+    const numFrom = pageFrom.pageNumber;
+    const numTo = pageTo.pageNumber;
+    updatePage.mutate(
+      { pageId: pageFrom.id, pageNumber: numTo },
+      {
+        onSuccess: () => {
+          updatePage.mutate({ pageId: pageTo.id, pageNumber: numFrom });
+        },
+      },
+    );
+    setSelectedPageIndex(toIndex);
+    handleDragEnd();
+  };
+
+  // 여러 장 한 번에 페이지 추가 — 첫 번째 단일 file 바인딩 템플릿 사용
+  const handleBulkAdd = (selectedPhotos) => {
+    const contentTemplates = availableTemplatesObj.content || [];
+    const singlePhotoTpl = contentTemplates.find((tpl) => {
+      const fileParams = Object.values(tpl.parameters ?? {}).filter((p) => p.binding === 'file');
+      return fileParams.length === 1;
+    }) ?? contentTemplates[0];
+    if (!singlePhotoTpl) {
+      alert('사용할 수 있는 내지 템플릿이 없습니다.');
+      return;
+    }
+    const fileKey = Object.entries(singlePhotoTpl.parameters ?? {})
+      .find(([, v]) => v.binding === 'file')?.[0];
+    const pagesToAdd = selectedPhotos.map((photo) => ({
+      contentTemplateUid: singlePhotoTpl.templateUid,
+      templateParams: fileKey ? { [fileKey]: String(photo.id) } : {},
+      photoId: photo.id,
+    }));
+    addPages.mutate(pagesToAdd, {
+      onSuccess: () => {
+        setShowBulkPicker(false);
+        setTargetPageIndex(currentPages + pagesToAdd.length - 1);
+      },
+      onError: () => {
+        alert('사진 추가에 실패했습니다.');
+      },
     });
   };
 
@@ -694,16 +851,59 @@ export function BookEditorPage() {
           )}
         </div>
 
-        {/* Right sidebar: Page list */}
-        <div className="w-[160px] lg:w-[180px] bg-white border-l border-warm-border flex-shrink-0 flex flex-col overflow-hidden">
+        {/* Mobile sheet toggle — floating button */}
+        <button
+          type="button"
+          onClick={() => setMobileSheetOpen(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-30 h-12 px-5 rounded-full bg-ink text-white text-xs font-semibold shadow-lg flex items-center gap-1.5"
+          aria-label="페이지 목록 열기"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          페이지 {currentPages}
+        </button>
+
+        {/* Mobile backdrop */}
+        {mobileSheetOpen && (
+          <div
+            className="lg:hidden fixed inset-0 z-30 bg-black/40"
+            onClick={() => setMobileSheetOpen(false)}
+          />
+        )}
+
+        {/* Right sidebar / Mobile bottom sheet: Page list */}
+        <div className={`
+          bg-white border-warm-border flex-shrink-0 flex flex-col overflow-hidden transition-transform
+          lg:relative lg:border-l lg:w-[180px] lg:translate-y-0
+          fixed inset-x-0 bottom-0 z-40 border-t rounded-t-2xl shadow-2xl max-h-[70vh] lg:max-h-none lg:rounded-none lg:shadow-none
+          ${mobileSheetOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+        `}>
           {/* Sticky header */}
+          {/* Mobile drag handle */}
+          <div className="lg:hidden flex items-center justify-center pt-2 pb-1">
+            <span className="w-10 h-1 rounded-full bg-warm-border" />
+          </div>
           <div className="p-3 border-b border-warm-border flex items-center justify-between flex-shrink-0">
             <p className="text-xs font-semibold text-ink-muted">페이지 ({currentPages})</p>
             {isEditable && (
-              <button type="button" onClick={() => setShowTemplatePicker({ type: 'ADD' })}
-                className="w-6 h-6 rounded-full bg-brand text-white text-sm flex items-center justify-center hover:bg-brand-hover transition-colors shadow-sm">
-                +
-              </button>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setMobileSheetOpen(false)}
+                  className="lg:hidden w-6 h-6 rounded-full bg-warm-bg text-ink-sub text-sm flex items-center justify-center hover:bg-warm-border"
+                  aria-label="목록 닫기">✕</button>
+                <button type="button" onClick={() => setShowBulkPicker(true)}
+                  className="h-6 px-2 rounded-full bg-brand/10 text-brand text-[10px] font-semibold hover:bg-brand/20 transition-colors"
+                  title="여러 사진 한 번에 추가"
+                  aria-label="여러 사진 한 번에 추가">
+                  +N장
+                </button>
+                <button type="button" onClick={() => setShowTemplatePicker({ type: 'ADD' })}
+                  className="w-6 h-6 rounded-full bg-brand text-white text-sm flex items-center justify-center hover:bg-brand-hover transition-colors shadow-sm"
+                  title="템플릿 선택하여 추가"
+                  aria-label="페이지 추가">
+                  +
+                </button>
+              </div>
             )}
           </div>
           {/* Scrollable page list */}
@@ -738,8 +938,22 @@ export function BookEditorPage() {
               const tpl = allTemplates.find((t) => t.templateUid === templateUid);
               const hasPhoto = page.thumbnailUrl || (page.templateParams && Object.values(page.templateParams).some((v) => v));
               const isSelected = !coverMode && selectedPageIndex === index;
+              const isDragOver = dragOverIndex === index && dragFromIndex !== null && dragFromIndex !== index;
+              const isDragging = dragFromIndex === index;
               return (
-                <div key={page.id} className="relative group">
+                <div
+                  key={page.id}
+                  className={`relative group transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'scale-[1.03]' : ''}`}
+                  draggable={isEditable}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={() => setDragOverIndex(null)}
+                  onDrop={() => handleDrop(index)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {isDragOver && (
+                    <div className="absolute -top-1 left-0 right-0 h-0.5 bg-brand rounded-full z-20" />
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -748,7 +962,7 @@ export function BookEditorPage() {
                       setPendingPageId(null);
                       setPendingParams({});
                     }}
-                    className={`w-full rounded-lg border-2 overflow-hidden relative transition-colors flex flex-col ${isSelected ? 'border-brand' : 'border-warm-border hover:border-brand/40'}`}
+                    className={`w-full rounded-lg border-2 overflow-hidden relative transition-colors flex flex-col ${isSelected ? 'border-brand' : isDragOver ? 'border-brand/70' : 'border-warm-border hover:border-brand/40'}`}
                     style={{ aspectRatio: `${aspectRatio}` }}
                   >
                     {page.thumbnailUrl ? (
@@ -822,6 +1036,14 @@ export function BookEditorPage() {
           groupId={groupId}
           onSelect={handlePhotoSelect}
           onClose={() => setShowPhotoPicker(null)}
+        />
+      )}
+
+      {showBulkPicker && (
+        <BulkPhotoPicker
+          photos={photos}
+          onConfirm={handleBulkAdd}
+          onClose={() => setShowBulkPicker(false)}
         />
       )}
     </div>

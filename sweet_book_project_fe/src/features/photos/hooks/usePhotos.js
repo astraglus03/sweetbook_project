@@ -17,6 +17,18 @@ export function usePhotos(groupId, params = {}) {
   });
 }
 
+export function useUploaderRanking(groupId, limit = 10) {
+  return useQuery({
+    queryKey: ['photos', groupId, 'uploader-ranking', limit],
+    queryFn: async () => {
+      const res = await photosApi.getUploaderRanking(groupId, limit);
+      return res.data;
+    },
+    enabled: !!groupId,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useChapters(groupId) {
   return useQuery({
     queryKey: ['photos', groupId, 'chapters'],

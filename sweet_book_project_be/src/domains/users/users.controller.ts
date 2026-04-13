@@ -42,8 +42,9 @@ export class UsersController {
   @Get('me/profile')
   @ApiOperation({ summary: '내 프로필 조회' })
   @ApiOkResponse({ type: ProfileResponseDto })
-  getProfile(@CurrentUser() user: User): ProfileResponseDto {
-    return ProfileResponseDto.from(user);
+  async getProfile(@CurrentUser() user: User): Promise<ProfileResponseDto> {
+    const hasPassword = await this.usersService.hasPassword(user.id);
+    return ProfileResponseDto.from(user, hasPassword);
   }
 
   @Patch('me/profile')
@@ -96,6 +97,23 @@ export class UsersController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  @Post('me/unlink-oauth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '소셜 계정 연동 해제 (비밀번호 필수)' })
+  async unlinkOAuth(@CurrentUser() user: User): Promise<void> {
+    await this.usersService.unlinkOAuth(user.id);
+  }
+
+  @Post('me/set-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '비밀번호 최초 설정 (소셜 계정용)' })
+  async setPassword(
+    @CurrentUser() user: User,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.usersService.setPassword(user.id, dto.newPassword);
   }
 
   @Delete('me')

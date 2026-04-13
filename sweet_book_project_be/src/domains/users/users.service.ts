@@ -141,6 +141,48 @@ export class UsersService {
     await this.usersRepository.save(user);
   }
 
+  async hasPassword(userId: number): Promise<boolean> {
+    const user = await this.usersRepository.findByIdWithPassword(userId);
+    return !!user?.passwordHash;
+  }
+
+  async unlinkOAuth(userId: number): Promise<void> {
+    const user = await this.usersRepository.findByIdWithPassword(userId);
+    if (!user) {
+      throw new NotFoundException('USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    }
+    if (user.provider === 'local') {
+      throw new ValidationException(
+        'USER_NOT_OAUTH',
+        '소셜 계정이 아닙니다',
+      );
+    }
+    if (!user.passwordHash) {
+      throw new ValidationException(
+        'USER_NO_PASSWORD',
+        '연동 해제 전에 비밀번호를 먼저 설정해야 합니다',
+      );
+    }
+    user.provider = 'local';
+    user.providerUserId = null;
+    await this.usersRepository.save(user);
+  }
+
+  async setPassword(userId: number, newPassword: string): Promise<void> {
+    const user = await this.usersRepository.findByIdWithPassword(userId);
+    if (!user) {
+      throw new NotFoundException('USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    }
+    if (user.passwordHash) {
+      throw new ConflictException(
+        'USER_PASSWORD_ALREADY_SET',
+        '이미 비밀번호가 설정되어 있습니다 (변경은 change-password 사용)',
+      );
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.usersRepository.save(user);
+  }
+
   async withdraw(userId: number): Promise<void> {
     const user = await this.findByIdOrFail(userId);
     user.name = '탈퇴한 사용자';

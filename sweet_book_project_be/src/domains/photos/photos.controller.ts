@@ -68,6 +68,17 @@ export class PhotosController {
     return this.photosService.getChapters(groupId);
   }
 
+  @Get('groups/:groupId/uploader-ranking')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '업로더 순위 (사진 많이 올린 사람 순)' })
+  getUploaderRanking(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Query('limit') limit?: string,
+  ) {
+    const n = limit ? Math.min(20, Math.max(1, Number(limit))) : 10;
+    return this.photosService.getUploaderRanking(groupId, n);
+  }
+
   @Get(':photoId')
   @ApiBearerAuth()
   @ApiOperation({ summary: '사진 상세' })

@@ -187,6 +187,41 @@ export class PhotosService {
     }));
   }
 
+  async getUploaderRanking(
+    groupId: number,
+    limit = 10,
+  ): Promise<
+    { userId: number; name: string; avatarUrl: string | null; count: number }[]
+  > {
+    const result = await this.photoRepository
+      .createQueryBuilder('photo')
+      .leftJoin('photo.uploader', 'uploader')
+      .select('uploader.id', 'userId')
+      .addSelect('uploader.name', 'name')
+      .addSelect('uploader.avatarUrl', 'avatarUrl')
+      .addSelect('COUNT(photo.id)', 'count')
+      .where('photo.groupId = :groupId', { groupId })
+      .andWhere('uploader.id IS NOT NULL')
+      .groupBy('uploader.id')
+      .addGroupBy('uploader.name')
+      .addGroupBy('uploader.avatarUrl')
+      .orderBy('count', 'DESC')
+      .limit(limit)
+      .getRawMany<{
+        userId: number;
+        name: string;
+        avatarUrl: string | null;
+        count: string;
+      }>();
+
+    return result.map((r) => ({
+      userId: Number(r.userId),
+      name: r.name ?? '알 수 없음',
+      avatarUrl: r.avatarUrl ?? null,
+      count: Number(r.count),
+    }));
+  }
+
   private async processAndSave(
     groupId: number,
     uploaderId: number,
