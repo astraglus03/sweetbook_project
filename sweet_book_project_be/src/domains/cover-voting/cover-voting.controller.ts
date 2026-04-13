@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -49,6 +50,29 @@ export class CoverVotingController {
     @CurrentUser() user: User,
   ): Promise<CoverCandidateResponseDto[]> {
     return this.coverVotingService.list(groupId, user.id);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: '표지 후보 단건 조회' })
+  @ApiOkResponse({ type: CoverCandidateResponseDto })
+  findOne(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ): Promise<CoverCandidateResponseDto> {
+    return this.coverVotingService.findOne(groupId, id, user.id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: '표지 후보 수정 (본인 또는 방장)' })
+  @ApiOkResponse({ type: CoverCandidateResponseDto })
+  update(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+    @Body() dto: CreateCoverCandidateDto,
+  ): Promise<CoverCandidateResponseDto> {
+    return this.coverVotingService.update(groupId, id, user.id, dto);
   }
 
   @Delete(':id')

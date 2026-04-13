@@ -97,6 +97,73 @@ export class CoverVotingService {
     });
   }
 
+  async findOne(
+    groupId: number,
+    candidateId: number,
+    userId: number,
+  ): Promise<CoverCandidateResponseDto> {
+    await this.verifyMember(groupId, userId);
+
+    const candidate = await this.candidateRepository.findOne({
+      where: { id: candidateId, groupId },
+      relations: ['creator'],
+    });
+    if (!candidate) {
+      throw new NotFoundException('COVER_CANDIDATE_NOT_FOUND', '표지 후보를 찾을 수 없습니다');
+    }
+
+    const voteCount = await this.voteRepository.count({ where: { candidateId } });
+    const myVote = await this.voteRepository.findOne({ where: { candidateId, userId } });
+    return this.toDto(candidate, userId, voteCount, !!myVote);
+  }
+
+  async getCandidateForBook(
+    groupId: number,
+    candidateId: number,
+  ): Promise<CoverCandidate> {
+    const candidate = await this.candidateRepository.findOne({
+      where: { id: candidateId, groupId },
+    });
+    if (!candidate) {
+      throw new NotFoundException('COVER_CANDIDATE_NOT_FOUND', '표지 후보를 찾을 수 없습니다');
+    }
+    return candidate;
+  }
+
+  async update(
+    groupId: number,
+    candidateId: number,
+    userId: number,
+    dto: CreateCoverCandidateDto,
+  ): Promise<CoverCandidateResponseDto> {
+    const member = await this.verifyMember(groupId, userId);
+
+    const candidate = await this.candidateRepository.findOne({
+      where: { id: candidateId, groupId },
+      relations: ['creator'],
+    });
+    if (!candidate) {
+      throw new NotFoundException('COVER_CANDIDATE_NOT_FOUND', '표지 후보를 찾을 수 없습니다');
+    }
+
+    const isOwner = member.role === 'OWNER';
+    const isCreator = candidate.creatorUserId === userId;
+    if (!isOwner && !isCreator) {
+      throw new ForbiddenException('COVER_CANDIDATE_UPDATE_FORBIDDEN', '본인 후보 또는 방장만 수정할 수 있습니다');
+    }
+
+    candidate.templateUid = dto.templateUid;
+    candidate.bookSpecUid = dto.bookSpecUid;
+    candidate.templateName = dto.templateName ?? null;
+    candidate.theme = dto.theme ?? null;
+    candidate.params = dto.params;
+
+    const saved = await this.candidateRepository.save(candidate);
+    const voteCount = await this.voteRepository.count({ where: { candidateId } });
+    const myVote = await this.voteRepository.findOne({ where: { candidateId, userId } });
+    return this.toDto(saved, userId, voteCount, !!myVote);
+  }
+
   async delete(groupId: number, candidateId: number, userId: number): Promise<void> {
     const member = await this.verifyMember(groupId, userId);
 

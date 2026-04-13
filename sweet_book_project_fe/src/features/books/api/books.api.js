@@ -13,6 +13,7 @@ export const booksApi = {
   addPages: (bookId, pages) => api.post(`/books/${bookId}/pages`, { pages }),
   updatePage: (bookId, pageId, payload) => api.patch(`/books/${bookId}/pages/${pageId}`, payload),
   deletePage: (bookId, pageId) => api.delete(`/books/${bookId}/pages/${pageId}`),
+  deleteBook: (bookId) => api.delete(`/books/${bookId}`),
   finalize: (bookId) => api.post(`/books/${bookId}/finalize`, null, { timeout: 120000 }),
   retry: (bookId) => api.post(`/books/${bookId}/retry`),
   getTemplateLayout: (bookId) => api.get(`/books/${bookId}/template-layout`),

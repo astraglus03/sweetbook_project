@@ -209,6 +209,7 @@ export function BookEditorPage() {
   const [coverMode, setCoverMode] = useState(false);
   const [coverTemplateUid, setCoverTemplateUid] = useState(null);
   const [coverParams, setCoverParams] = useState({});
+  const [coverHydrated, setCoverHydrated] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const groupId = book?.groupId;
@@ -372,16 +373,33 @@ export function BookEditorPage() {
     return coverTemplates[0] ?? null;
   }, [coverTemplateUid, coverTemplates]);
 
-  // Auto-set cover on first load + start in cover mode when no pages
+  // Hydrate cover state from saved book (confirmed candidate or previous edit) on first load
   useEffect(() => {
-    if (!coverTemplateUid && coverTemplates.length > 0) {
-      setCoverTemplateUid(coverTemplates[0].templateUid);
+    if (coverHydrated || !book) return;
+    if (book.coverTemplateUid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoverTemplateUid(book.coverTemplateUid);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoverParams(book.coverParams ?? {});
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoverHydrated(true);
+      return;
     }
-    // If no pages yet, auto-enter cover mode
-    if (pages.length === 0 && coverTemplates.length > 0 && !coverMode) {
+    if (coverTemplates.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoverTemplateUid(coverTemplates[0].templateUid);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCoverHydrated(true);
+    }
+  }, [book, coverTemplates, coverHydrated]);
+
+  // Auto-enter cover mode when no pages exist yet (only after hydration)
+  useEffect(() => {
+    if (coverHydrated && pages.length === 0 && coverTemplates.length > 0 && !coverMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCoverMode(true);
     }
-  }, [coverTemplates, coverTemplateUid, pages.length, coverMode]);
+  }, [coverHydrated, pages.length, coverTemplates.length, coverMode]);
 
   const hasPendingChanges = pendingPageId === currentPage?.id && Object.keys(pendingParams).length > 0;
 

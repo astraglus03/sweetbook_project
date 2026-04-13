@@ -87,6 +87,15 @@ export class BooksController {
     return this.booksService.getBook(bookId, user.id);
   }
 
+  @Delete(':bookId')
+  @ApiOperation({ summary: '포토북 삭제 (DRAFT/FAILED만, 본인 또는 방장)' })
+  deleteBook(
+    @CurrentUser() user: User,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.booksService.deleteBook(bookId, user.id);
+  }
+
   @Get(':bookId/pages')
   @ApiOperation({ summary: '포토북 페이지 목록 조회' })
   getBookPages(

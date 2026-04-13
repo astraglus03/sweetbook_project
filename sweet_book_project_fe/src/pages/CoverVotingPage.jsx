@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueries } from '@tanstack/react-query';
 import { useGroupDetail } from '../features/groups/hooks/useGroups';
 import { useMe } from '../features/auth/hooks/useAuth';
 import {
@@ -12,6 +13,7 @@ import { CoverPreview } from '../features/cover-voting/components/CoverPreview';
 import { CoverCandidateModal } from '../features/cover-voting/components/CoverCandidateModal';
 import { usePhotos } from '../features/photos/hooks/usePhotos';
 import { specLabel } from '../features/books/lib/bookLabels';
+import { booksApi } from '../features/books/api/books.api';
 
 export function CoverVotingPage() {
   const { groupId } = useParams();
@@ -23,11 +25,42 @@ export function CoverVotingPage() {
   const { data: candidates, isLoading, isError } = useCoverCandidates(gid);
   const { data: photoData } = usePhotos(gid, { limit: 200 });
   const photos = photoData?.photos ?? [];
+
+  // 후보들이 쓰는 고유 bookSpecUid만 모아서 cover-templates를 병렬 fetch (캐시 10분)
+  const uniqueSpecs = useMemo(() => {
+    const set = new Set((candidates ?? []).map((c) => c.bookSpecUid).filter(Boolean));
+    return Array.from(set);
+  }, [candidates]);
+
+  const specTemplateQueries = useQueries({
+    queries: uniqueSpecs.map((s) => ({
+      queryKey: ['books', 'cover-templates', s],
+      queryFn: async () => {
+        const res = await booksApi.getCoverTemplates(s);
+        return res.data;
+      },
+      staleTime: 10 * 60 * 1000,
+    })),
+  });
+
+  // templateUid → template 객체 매핑
+  const templateByUid = useMemo(() => {
+    const map = new Map();
+    specTemplateQueries.forEach((q) => {
+      if (Array.isArray(q.data)) {
+        q.data.forEach((t) => {
+          if (t?.templateUid) map.set(t.templateUid, t);
+        });
+      }
+    });
+    return map;
+  }, [specTemplateQueries]);
   const deleteCandidate = useDeleteCoverCandidate(gid);
   const toggleVote = useToggleCoverVote(gid);
   const confirmCandidate = useConfirmCoverCandidate(gid);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCandidate, setEditingCandidate] = useState(null);
   const [confirmingId, setConfirmingId] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -53,9 +86,10 @@ export function CoverVotingPage() {
     confirmCandidate.mutate(id, {
       onSuccess: () => {
         setConfirmingId(null);
-        showToast('표지가 확정됐어요!');
-        // TODO: navigate to BookCreate with coverCandidateId when that page supports pre-fill
-        // navigate(`/groups/${groupId}/books/new?coverCandidateId=${id}`);
+        showToast('표지가 확정됐어요! 포토북 만들기로 이동합니다');
+        setTimeout(() => {
+          navigate(`/groups/${groupId}/books/new?coverCandidateId=${id}`);
+        }, 700);
       },
       onError: () => {
         setConfirmingId(null);
@@ -146,8 +180,8 @@ export function CoverVotingPage() {
               return (
                 <div key={candidate.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
                   <CoverPreview
+                    template={templateByUid.get(candidate.templateUid) ?? null}
                     templateUid={candidate.templateUid}
-                    templateThumbnailUrl={null}
                     params={candidate.params ?? {}}
                     photos={photos}
                   />
@@ -180,6 +214,16 @@ export function CoverVotingPage() {
                       </button>
 
                       <div className="flex gap-2">
+                        {/* 수정 (본인 후보 또는 방장) */}
+                        {canDelete && (
+                          <button
+                            onClick={() => setEditingCandidate(candidate)}
+                            className="text-xs text-ink/50 hover:text-brand transition-colors px-2 py-1"
+                          >
+                            수정
+                          </button>
+                        )}
+
                         {/* 삭제 */}
                         {canDelete && (
                           <button
@@ -214,6 +258,13 @@ export function CoverVotingPage() {
       {/* 모달 */}
       {isModalOpen && (
         <CoverCandidateModal groupId={gid} onClose={() => setIsModalOpen(false)} />
+      )}
+      {editingCandidate && (
+        <CoverCandidateModal
+          groupId={gid}
+          candidate={editingCandidate}
+          onClose={() => setEditingCandidate(null)}
+        />
       )}
 
       {/* 토스트 */}

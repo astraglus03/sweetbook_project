@@ -1,27 +1,37 @@
+import { TemplateCanvas } from '../../books/components/TemplateCanvas';
+
 /**
  * CoverPreview — 표지 후보 카드 미리보기
  *
  * Props:
- *   templateUid          — 템플릿 UID (표시용)
- *   templateThumbnailUrl — 템플릿 썸네일 URL (배경 레이어로 사용)
- *   params               — { [slotId]: photoId(number|string) | text(string) }
- *   photos               — 그룹 사진 배열 (photoId 매핑용)
- *   className            — 추가 CSS 클래스
- *
- * 렌더링 전략:
- *   - 정확한 좌표 메타 없이 "근사치" 렌더링:
- *     첫 번째 숫자형 값(photoId)을 배경 사진으로,
- *     문자열 값들을 하단 오버레이 텍스트로 표시.
- *   - 템플릿 썸네일이 있으면 반투명 오버레이로 레이아웃 힌트 제공.
+ *   template    — 전체 템플릿 객체 (elements + parameters). 있으면 실제 레이아웃으로 렌더
+ *   templateUid — 템플릿 UID (fallback 표시용)
+ *   params      — { [slotId]: photoId | text }
+ *   photos      — 그룹 사진 배열
+ *   className   — 추가 CSS 클래스
  */
 export function CoverPreview({
-  templateUid,
-  templateThumbnailUrl,
+  template = null,
   params = {},
   photos = [],
   className = '',
 }) {
-  // 첫 번째 사진 슬롯 값 (숫자형 photoId)
+  // 실제 템플릿이 있으면 TemplateCanvas로 정확한 레이아웃 렌더
+  if (template) {
+    return (
+      <div className={`relative ${className}`}>
+        <TemplateCanvas
+          template={template}
+          params={params}
+          photos={photos}
+          isEditable={false}
+          templateKind="cover"
+        />
+      </div>
+    );
+  }
+
+  // Fallback: 템플릿 정보 없이 근사치 렌더
   const firstPhotoId = Object.values(params).find(
     (v) => typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v)),
   );
@@ -29,20 +39,17 @@ export function CoverPreview({
     ? photos.find((p) => String(p.id) === String(firstPhotoId))
     : null;
 
-  // 문자열 슬롯 값 (텍스트 — 숫자 전용 값 제외)
   const textValues = Object.entries(params)
     .filter(([, v]) => typeof v === 'string' && !/^\d+$/.test(v) && v.trim())
     .map(([, v]) => String(v));
 
   const primaryText = textValues[0] ?? null;
-  const secondaryText = textValues[1] ?? null;
 
   return (
     <div
       className={`relative overflow-hidden rounded-lg bg-gray-900 ${className}`}
       style={{ aspectRatio: '3/4' }}
     >
-      {/* 배경: 사진 슬롯의 첫 번째 사진 */}
       {coverPhoto ? (
         <img
           src={coverPhoto.mediumUrl || coverPhoto.thumbnailUrl}
@@ -59,51 +66,15 @@ export function CoverPreview({
         </div>
       )}
 
-      {/* 템플릿 레이아웃 힌트 오버레이 (반투명) */}
-      {templateThumbnailUrl && (
-        <img
-          src={templateThumbnailUrl}
-          alt={templateUid ?? ''}
-          className="absolute inset-0 w-full h-full object-cover opacity-25"
-          loading="lazy"
-        />
-      )}
-
-      {/* 텍스트 슬롯 오버레이 — 하단 그라디언트 위에 표시 */}
-      {(primaryText || secondaryText) && (
+      {primaryText && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-4 pt-10 pb-4">
-          {primaryText && (
-            <h2
-              className="font-display text-white text-base lg:text-lg font-semibold leading-tight"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
-            >
-              {primaryText}
-            </h2>
-          )}
-          {secondaryText && (
-            <p
-              className="font-display text-white/75 text-xs mt-1 leading-snug"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}
-            >
-              {secondaryText}
-            </p>
-          )}
+          <h2 className="font-display text-white text-base lg:text-lg font-semibold leading-tight"
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
+            {primaryText}
+          </h2>
         </div>
       )}
 
-      {/* 미리보기 배지 */}
-      <div className="absolute top-1.5 right-1.5">
-        <span className="text-white/60 text-[10px] bg-black/30 px-1.5 py-0.5 rounded">
-          미리보기
-        </span>
-      </div>
-
-      {/* 디스클레이머 */}
-      <div className="absolute bottom-1.5 left-1.5">
-        <span className="text-white/40 text-[9px] bg-black/20 px-1 py-0.5 rounded leading-tight">
-          실제 인쇄물과 차이 있을 수 있어요
-        </span>
-      </div>
     </div>
   );
 }
