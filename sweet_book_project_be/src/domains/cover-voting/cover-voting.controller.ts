@@ -78,7 +78,7 @@ export class CoverVotingController {
     @Param('groupId', ParseIntPipe) groupId: number,
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: User,
-  ): Promise<{ photoId: number; title: string; subtitle: string | null; templateKind: string }> {
+  ): Promise<{ photoId: number; title: string; subtitle: string | null; templateUid: string; bookSpecUid: string }> {
     return this.coverVotingService.confirm(groupId, id, user.id);
   }
 }

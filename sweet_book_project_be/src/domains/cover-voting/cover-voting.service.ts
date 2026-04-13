@@ -72,7 +72,8 @@ export class CoverVotingService {
       photoId: dto.photoId,
       title: dto.title,
       subtitle: dto.subtitle ?? null,
-      templateKind: dto.templateKind,
+      templateUid: dto.templateUid,
+      bookSpecUid: dto.bookSpecUid,
     });
     const saved = await this.candidateRepository.save(candidate);
 
@@ -176,7 +177,7 @@ export class CoverVotingService {
     groupId: number,
     candidateId: number,
     userId: number,
-  ): Promise<{ photoId: number; title: string; subtitle: string | null; templateKind: string }> {
+  ): Promise<{ photoId: number; title: string; subtitle: string | null; templateUid: string; bookSpecUid: string }> {
     await this.verifyOwner(groupId, userId);
 
     const candidate = await this.candidateRepository.findOne({
@@ -197,7 +198,8 @@ export class CoverVotingService {
       photoId: candidate.photoId,
       title: candidate.title,
       subtitle: candidate.subtitle,
-      templateKind: candidate.templateKind,
+      templateUid: candidate.templateUid,
+      bookSpecUid: candidate.bookSpecUid,
     };
   }
 
@@ -217,7 +219,8 @@ export class CoverVotingService {
     dto.photoUrl = this.buildPhotoUrl(photo);
     dto.title = candidate.title;
     dto.subtitle = candidate.subtitle;
-    dto.templateKind = candidate.templateKind;
+    dto.templateUid = candidate.templateUid;
+    dto.bookSpecUid = candidate.bookSpecUid;
     dto.voteCount = voteCount;
     dto.votedByMe = votedByMe;
     dto.createdAt = candidate.createdAt;

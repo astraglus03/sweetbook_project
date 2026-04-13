@@ -13,8 +13,6 @@ import { User } from '../../users/entities/user.entity';
 import { Photo } from '../../photos/entities/photo.entity';
 import { CoverVote } from './cover-vote.entity';
 
-export type TemplateKind = 'CLASSIC' | 'MINIMAL';
-
 @Entity('cover_candidates')
 @Index('idx_ccand_group', ['groupId'])
 export class CoverCandidate {
@@ -36,8 +34,11 @@ export class CoverCandidate {
   @Column({ type: 'varchar', length: 60, nullable: true })
   subtitle: string | null;
 
-  @Column({ type: 'varchar', length: 20 })
-  templateKind: TemplateKind;
+  @Column({ type: 'varchar', length: 50 })
+  templateUid: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  bookSpecUid: string;
 
   @CreateDateColumn()
   createdAt: Date;

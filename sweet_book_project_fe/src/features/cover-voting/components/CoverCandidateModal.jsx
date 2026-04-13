@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { usePhotos } from '../../photos/hooks/usePhotos';
+import { useTemplates } from '../../books/hooks/useBooks';
 import { CoverPreview } from './CoverPreview';
 import { useCreateCoverCandidate } from '../hooks/useCoverVoting';
 
-const TEMPLATE_OPTIONS = [
-  { value: 'CLASSIC', label: '클래식', desc: '중앙 정렬 텍스트' },
-  { value: 'MINIMAL', label: '미니멀', desc: '하단 좌측 텍스트' },
-];
+const DEFAULT_BOOK_SPEC_UID = 'SQUAREBOOK_HC';
 
 export function CoverCandidateModal({ groupId, onClose }) {
   const [selectedPhotoId, setSelectedPhotoId] = useState(null);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(null);
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
-  const [templateKind, setTemplateKind] = useState('CLASSIC');
+  const [selectedTemplateUid, setSelectedTemplateUid] = useState(null);
 
-  const { data, isLoading } = usePhotos(groupId, { limit: 50 });
-  const photos = data?.photos ?? [];
+  const { data: photoData, isLoading: photosLoading } = usePhotos(groupId, { limit: 50 });
+  const photos = photoData?.photos ?? [];
+
+  const { data: templates, isLoading: templatesLoading } = useTemplates(DEFAULT_BOOK_SPEC_UID);
+  const templateList = Array.isArray(templates) ? templates : [];
+
   const createCandidate = useCreateCoverCandidate(groupId);
 
   const handleSelectPhoto = (photo) => {
@@ -24,16 +26,19 @@ export function CoverCandidateModal({ groupId, onClose }) {
     setSelectedPhotoUrl(photo.mediumUrl);
   };
 
+  const selectedTemplate = templateList.find((t) => t.templateUid === selectedTemplateUid) ?? null;
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedPhotoId || !title.trim()) return;
+    if (!selectedPhotoId || !title.trim() || !selectedTemplateUid) return;
 
     createCandidate.mutate(
       {
         photoId: selectedPhotoId,
         title: title.trim(),
         subtitle: subtitle.trim() || undefined,
-        templateKind,
+        templateUid: selectedTemplateUid,
+        bookSpecUid: DEFAULT_BOOK_SPEC_UID,
       },
       {
         onSuccess: () => onClose(),
@@ -59,7 +64,7 @@ export function CoverCandidateModal({ groupId, onClose }) {
           {/* 사진 선택 */}
           <div>
             <p className="text-sm font-medium text-ink mb-2">사진 선택</p>
-            {isLoading ? (
+            {photosLoading ? (
               <div className="grid grid-cols-4 gap-2">
                 {[...Array(8)].map((_, i) => (
                   <div key={i} className="aspect-square bg-warm-border rounded-lg animate-pulse" />
@@ -124,35 +129,71 @@ export function CoverCandidateModal({ groupId, onClose }) {
 
           {/* 템플릿 선택 */}
           <div>
-            <p className="text-sm font-medium text-ink mb-2">템플릿</p>
-            <div className="flex gap-3">
-              {TEMPLATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setTemplateKind(opt.value)}
-                  className={`flex-1 py-2.5 px-3 rounded-lg border text-sm transition-colors ${
-                    templateKind === opt.value
-                      ? 'border-brand bg-brand/5 text-brand font-medium'
-                      : 'border-warm-border text-ink/60 hover:border-brand/40'
-                  }`}
-                >
-                  <span className="block font-medium">{opt.label}</span>
-                  <span className="block text-xs opacity-70 mt-0.5">{opt.desc}</span>
-                </button>
-              ))}
-            </div>
+            <p className="text-sm font-medium text-ink mb-2">
+              템플릿 선택 <span className="text-red-500">*</span>
+            </p>
+            {templatesLoading ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="aspect-[3/4] bg-warm-border rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : templateList.length === 0 ? (
+              <p className="text-sm text-ink/50 py-4 text-center">
+                템플릿을 불러오지 못했습니다
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+                {templateList.map((tmpl) => (
+                  <button
+                    key={tmpl.templateUid}
+                    type="button"
+                    onClick={() => setSelectedTemplateUid(tmpl.templateUid)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-colors focus:outline-none ${
+                      selectedTemplateUid === tmpl.templateUid
+                        ? 'border-brand'
+                        : 'border-transparent hover:border-brand/40'
+                    }`}
+                    style={{ aspectRatio: '3/4' }}
+                  >
+                    {tmpl.thumbnailUrl ? (
+                      <img
+                        src={tmpl.thumbnailUrl}
+                        alt={tmpl.name ?? tmpl.templateUid}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-warm-border flex items-center justify-center">
+                        <span className="text-xs text-ink/40 text-center px-1 leading-tight">
+                          {tmpl.name ?? tmpl.templateUid}
+                        </span>
+                      </div>
+                    )}
+                    {selectedTemplateUid === tmpl.templateUid && (
+                      <div className="absolute inset-0 bg-brand/10 flex items-center justify-center">
+                        <span className="text-brand text-xl font-bold">✓</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedTemplate?.name && (
+              <p className="text-xs text-ink/50 mt-1.5">{selectedTemplate.name}</p>
+            )}
           </div>
 
           {/* 미리보기 */}
-          {selectedPhotoUrl && title && (
+          {selectedPhotoUrl && title && selectedTemplateUid && (
             <div>
               <p className="text-sm font-medium text-ink mb-2">미리보기</p>
               <CoverPreview
                 photoUrl={selectedPhotoUrl}
                 title={title}
                 subtitle={subtitle || null}
-                templateKind={templateKind}
+                templateUid={selectedTemplateUid}
+                templateThumbnailUrl={selectedTemplate?.thumbnailUrl ?? null}
                 className="w-40 mx-auto"
               />
             </div>
@@ -161,7 +202,12 @@ export function CoverCandidateModal({ groupId, onClose }) {
           {/* 저장 */}
           <button
             type="submit"
-            disabled={!selectedPhotoId || !title.trim() || createCandidate.isPending}
+            disabled={
+              !selectedPhotoId ||
+              !title.trim() ||
+              !selectedTemplateUid ||
+              createCandidate.isPending
+            }
             className="w-full h-12 rounded-xl bg-brand text-white text-sm font-semibold disabled:opacity-40 hover:bg-brand/90 transition-colors"
           >
             {createCandidate.isPending ? '추가 중...' : '후보 추가'}

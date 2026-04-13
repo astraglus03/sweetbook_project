@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { TemplateKind } from '../entities/cover-candidate.entity';
 
 export class CreateCoverCandidateDto {
   @ApiProperty({ description: '사진 ID' })
@@ -21,7 +20,15 @@ export class CreateCoverCandidateDto {
   @MaxLength(60)
   subtitle?: string;
 
-  @ApiProperty({ description: '템플릿 종류', enum: ['CLASSIC', 'MINIMAL'] })
-  @IsEnum(['CLASSIC', 'MINIMAL'])
-  templateKind: TemplateKind;
+  @ApiProperty({ description: 'Sweetbook 템플릿 UID', maxLength: 50 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  templateUid: string;
+
+  @ApiProperty({ description: 'Sweetbook 판형 UID', maxLength: 50 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  bookSpecUid: string;
 }
