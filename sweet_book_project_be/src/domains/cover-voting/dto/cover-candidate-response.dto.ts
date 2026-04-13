@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { TemplateKind } from '../entities/cover-candidate.entity';
 
 export class CoverCandidateResponseDto {
   @ApiProperty()
@@ -26,8 +25,11 @@ export class CoverCandidateResponseDto {
   @ApiPropertyOptional()
   subtitle: string | null;
 
-  @ApiProperty({ enum: ['CLASSIC', 'MINIMAL'] })
-  templateKind: TemplateKind;
+  @ApiProperty({ description: 'Sweetbook 템플릿 UID' })
+  templateUid: string;
+
+  @ApiProperty({ description: 'Sweetbook 판형 UID' })
+  bookSpecUid: string;
 
   @ApiProperty()
   voteCount: number;

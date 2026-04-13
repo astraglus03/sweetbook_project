@@ -145,7 +145,8 @@ export function CoverVotingPage() {
                     photoUrl={candidate.photoUrl}
                     title={candidate.title}
                     subtitle={candidate.subtitle}
-                    templateKind={candidate.templateKind}
+                    templateUid={candidate.templateUid}
+                    templateThumbnailUrl={null}
                   />
 
                   <div className="p-3">
@@ -156,7 +157,7 @@ export function CoverVotingPage() {
                       <p className="text-xs text-ink/50 mt-0.5 truncate">{candidate.subtitle}</p>
                     )}
                     <p className="text-xs text-ink/40 mt-1">
-                      {candidate.templateKind === 'CLASSIC' ? '클래식' : '미니멀'} · {candidate.creatorName}
+                      {candidate.templateUid} · {candidate.creatorName}
                     </p>
 
                     <div className="flex items-center justify-between mt-3">
