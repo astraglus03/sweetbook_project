@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSignup } from '../features/auth/hooks/useAuth';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = '/api';
 
 export function SignupPage() {
   const navigate = useNavigate();
