@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -37,10 +36,6 @@ async function bootstrap(): Promise<void> {
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
-
-  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
 
   const port = Number(configService.getOrThrow<string>('PORT'));
   await app.listen(port);

@@ -5,6 +5,8 @@ import * as faceapi from '@vladmandic/face-api';
 import '@tensorflow/tfjs-node';
 import { Canvas, Image, ImageData, loadImage } from 'canvas';
 
+type FaceInput = string | Buffer;
+
 export interface DetectedFace {
   embedding: number[];
   bbox: { x: number; y: number; width: number; height: number };
@@ -54,10 +56,10 @@ export class FaceApiService implements OnModuleInit {
     return this.initialized;
   }
 
-  async detectAll(imagePath: string): Promise<DetectedFace[]> {
+  async detectAll(input: FaceInput): Promise<DetectedFace[]> {
     if (!this.initialized) await this.init();
 
-    const img = await loadImage(imagePath);
+    const img = await loadImage(input);
     const results = await faceapi
       .detectAllFaces(img as unknown as faceapi.TNetInput)
       .withFaceLandmarks()
@@ -75,8 +77,8 @@ export class FaceApiService implements OnModuleInit {
     }));
   }
 
-  async detectSingle(imagePath: string): Promise<DetectedFace | null> {
-    const faces = await this.detectAll(imagePath);
+  async detectSingle(input: FaceInput): Promise<DetectedFace | null> {
+    const faces = await this.detectAll(input);
     if (faces.length === 0) return null;
     if (faces.length > 1) {
       faces.sort(

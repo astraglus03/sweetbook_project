@@ -1,11 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DataSource, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import sharp from 'sharp';
+import { StorageService } from '../../common/storage/storage.service';
 import { Photo } from '../photos/entities/photo.entity';
 import { UserFaceAnchor } from '../photos/entities/user-face-anchor.entity';
 import {
@@ -45,7 +43,7 @@ export class GroupsService {
     @InjectRepository(UserFaceAnchor)
     private readonly faceAnchorRepository: Repository<UserFaceAnchor>,
     private readonly activitiesService: ActivitiesService,
-    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
   ) {}
 
   async uploadCover(
@@ -67,19 +65,18 @@ export class GroupsService {
     const group = await this.findGroupOrFail(groupId);
     this.verifyOwner(group, userId);
 
-    const dir = path.join(process.cwd(), 'uploads', 'groups', String(groupId));
-    await fs.mkdir(dir, { recursive: true });
     const filename = `cover-${Date.now()}.webp`;
-    const filePath = path.join(dir, filename);
-
-    await sharp(file.buffer)
+    const buffer = await sharp(file.buffer)
       .rotate()
       .resize(1600, 900, { fit: 'cover', position: 'attention' })
       .webp({ quality: 85 })
-      .toFile(filePath);
+      .toBuffer();
 
-    const baseUrl = this.configService.getOrThrow<string>('BASE_URL');
-    const coverUrl = `${baseUrl}/uploads/groups/${groupId}/${filename}`;
+    const coverUrl = await this.storageService.upload(
+      `groups/${groupId}/${filename}`,
+      buffer,
+      'image/webp',
+    );
 
     group.coverImage = coverUrl;
     await this.groupsRepository.save(group);

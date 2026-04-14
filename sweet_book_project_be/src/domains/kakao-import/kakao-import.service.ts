@@ -1,10 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import AdmZip from 'adm-zip';
 import * as path from 'path';
-import * as fs from 'fs/promises';
 import sharp from 'sharp';
 import { Photo } from '../photos/entities/photo.entity';
 import { GroupMember } from '../groups/entities/group-member.entity';
@@ -16,9 +14,10 @@ import {
   ParsedPhotoMessage,
 } from './kakao-parser';
 import { ValidationException } from '../../common/exceptions';
+import { StorageService } from '../../common/storage/storage.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { photoObjectPath } from '../photos/photos.service';
 
-const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'photos');
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 const MAX_ZIP_SIZE = 100 * 1024 * 1024; // 100MB (MVP)
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB per image
@@ -33,7 +32,6 @@ export interface ImportResult {
 @Injectable()
 export class KakaoImportService {
   private readonly logger = new Logger(KakaoImportService.name);
-  private readonly baseUrl: string;
 
   constructor(
     @InjectRepository(Photo)
@@ -42,11 +40,9 @@ export class KakaoImportService {
     private readonly groupMemberRepository: Repository<GroupMember>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
     private readonly activitiesService: ActivitiesService,
-  ) {
-    this.baseUrl = this.configService.getOrThrow<string>('BASE_URL');
-  }
+  ) {}
 
   async importZip(
     groupId: number,
@@ -101,14 +97,6 @@ export class KakaoImportService {
       members.map((m) => [normalizeKakaoName(m.user?.name ?? ''), m.userId]),
     );
 
-    // 각 사진 저장
-    const groupDir = path.join(UPLOAD_BASE, String(groupId));
-    await Promise.all(
-      ['original', 'medium', 'thumbnail'].map((d) =>
-        fs.mkdir(path.join(groupDir, d), { recursive: true }),
-      ),
-    );
-
     let savedCount = 0;
     let matchedCount = 0;
     const unmatchedSet = new Set<string>();
@@ -144,7 +132,6 @@ export class KakaoImportService {
           kakaoName,
           img.entry.entryName,
           buffer,
-          groupDir,
         );
         savedCount++;
       } catch (err) {
@@ -237,26 +224,34 @@ export class KakaoImportService {
     kakaoName: string | null,
     originalFilename: string,
     buffer: Buffer,
-    groupDir: string,
   ): Promise<void> {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
     // rotate(): EXIF orientation 반영 후 Sharp는 기본적으로 모든 메타데이터(EXIF GPS 포함)를 제거한다.
     const base = sharp(buffer).rotate().webp({ quality: 85 });
     const metadata = await sharp(buffer).metadata();
 
+    const [originalBuf, mediumBuf, thumbnailBuf] = await Promise.all([
+      base.clone().resize(1200, null, { withoutEnlargement: true }).toBuffer(),
+      base.clone().resize(600, null, { withoutEnlargement: true }).toBuffer(),
+      base.clone().resize(200, 200, { fit: 'cover' }).toBuffer(),
+    ]);
+
     await Promise.all([
-      base
-        .clone()
-        .resize(1200, null, { withoutEnlargement: true })
-        .toFile(path.join(groupDir, 'original', uniqueName)),
-      base
-        .clone()
-        .resize(600, null, { withoutEnlargement: true })
-        .toFile(path.join(groupDir, 'medium', uniqueName)),
-      base
-        .clone()
-        .resize(200, 200, { fit: 'cover' })
-        .toFile(path.join(groupDir, 'thumbnail', uniqueName)),
+      this.storageService.upload(
+        photoObjectPath(groupId, 'original', uniqueName),
+        originalBuf,
+        'image/webp',
+      ),
+      this.storageService.upload(
+        photoObjectPath(groupId, 'medium', uniqueName),
+        mediumBuf,
+        'image/webp',
+      ),
+      this.storageService.upload(
+        photoObjectPath(groupId, 'thumbnail', uniqueName),
+        thumbnailBuf,
+        'image/webp',
+      ),
     ]);
 
     const photo = this.photoRepository.create({

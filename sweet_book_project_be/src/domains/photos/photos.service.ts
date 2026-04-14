@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import sharp from 'sharp';
 import { Photo } from './entities/photo.entity';
 import { PhotoResponseDto } from './dto/photo-response.dto';
@@ -14,24 +11,32 @@ import {
   ForbiddenException,
   ValidationException,
 } from '../../common/exceptions';
+import { StorageService } from '../../common/storage/storage.service';
 import { ActivitiesService } from '../activities/activities.service';
 
-const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'photos');
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+export function photoObjectPath(
+  groupId: number,
+  variant: 'original' | 'medium' | 'thumbnail',
+  filename: string,
+): string {
+  return `photos/${groupId}/${variant}/${filename}`;
+}
 
 @Injectable()
 export class PhotosService {
   private readonly logger = new Logger(PhotosService.name);
-  private readonly baseUrl: string;
+  private readonly publicBase: string;
 
   constructor(
     @InjectRepository(Photo)
     private readonly photoRepository: Repository<Photo>,
-    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
     private readonly activitiesService: ActivitiesService,
   ) {
-    this.baseUrl = this.configService.getOrThrow<string>('BASE_URL');
+    this.publicBase = this.storageService.getPublicBase();
   }
 
   async uploadPhotos(
@@ -58,7 +63,7 @@ export class PhotosService {
 
     for (const file of files) {
       const photo = await this.processAndSave(groupId, uploaderId, file);
-      results.push(PhotoResponseDto.from(photo, this.baseUrl));
+      results.push(PhotoResponseDto.from(photo, this.publicBase));
     }
 
     await this.activitiesService.record({
@@ -101,7 +106,7 @@ export class PhotosService {
     const [photos, total] = await qb.getManyAndCount();
 
     return {
-      photos: photos.map((p) => PhotoResponseDto.from(p, this.baseUrl)),
+      photos: photos.map((p) => PhotoResponseDto.from(p, this.publicBase)),
       meta: {
         page,
         limit,
@@ -119,7 +124,7 @@ export class PhotosService {
     if (!photo) {
       throw new NotFoundException('PHOTO_NOT_FOUND', '사진을 찾을 수 없습니다');
     }
-    return PhotoResponseDto.from(photo, this.baseUrl);
+    return PhotoResponseDto.from(photo, this.publicBase);
   }
 
   async updatePhoto(
@@ -145,7 +150,7 @@ export class PhotosService {
       photo.chapter = dto.chapter;
     }
     const saved = await this.photoRepository.save(photo);
-    return PhotoResponseDto.from(saved, this.baseUrl);
+    return PhotoResponseDto.from(saved, this.publicBase);
   }
 
   async deletePhoto(photoId: number, userId: number): Promise<void> {
@@ -162,7 +167,11 @@ export class PhotosService {
       );
     }
 
-    await this.deleteFiles(photo.groupId, photo.filename);
+    await this.storageService.remove([
+      photoObjectPath(photo.groupId, 'original', photo.filename),
+      photoObjectPath(photo.groupId, 'medium', photo.filename),
+      photoObjectPath(photo.groupId, 'thumbnail', photo.filename),
+    ]);
     await this.photoRepository.remove(photo);
   }
 
@@ -224,32 +233,40 @@ export class PhotosService {
     uploaderId: number,
     file: Express.Multer.File,
   ): Promise<Photo> {
-    const ext = '.webp';
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-
-    const groupDir = path.join(UPLOAD_BASE, String(groupId));
-    const dirs = ['original', 'medium', 'thumbnail'].map((d) =>
-      path.join(groupDir, d),
-    );
-    await Promise.all(dirs.map((d) => fs.mkdir(d, { recursive: true })));
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
 
     // rotate(): EXIF orientation 반영 후 Sharp는 기본적으로 모든 메타데이터(EXIF GPS 포함)를 제거한다.
     const base = sharp(file.buffer).rotate().webp({ quality: 85 });
     const metadata = await sharp(file.buffer).metadata();
 
-    await Promise.all([
+    const [originalBuf, mediumBuf, thumbnailBuf] = await Promise.all([
       base
         .clone()
         .resize(1200, null, { withoutEnlargement: true })
-        .toFile(path.join(groupDir, 'original', uniqueName)),
+        .toBuffer(),
       base
         .clone()
         .resize(600, null, { withoutEnlargement: true })
-        .toFile(path.join(groupDir, 'medium', uniqueName)),
-      base
-        .clone()
-        .resize(200, 200, { fit: 'cover' })
-        .toFile(path.join(groupDir, 'thumbnail', uniqueName)),
+        .toBuffer(),
+      base.clone().resize(200, 200, { fit: 'cover' }).toBuffer(),
+    ]);
+
+    await Promise.all([
+      this.storageService.upload(
+        photoObjectPath(groupId, 'original', uniqueName),
+        originalBuf,
+        'image/webp',
+      ),
+      this.storageService.upload(
+        photoObjectPath(groupId, 'medium', uniqueName),
+        mediumBuf,
+        'image/webp',
+      ),
+      this.storageService.upload(
+        photoObjectPath(groupId, 'thumbnail', uniqueName),
+        thumbnailBuf,
+        'image/webp',
+      ),
     ]);
 
     const photo = this.photoRepository.create({
@@ -269,17 +286,5 @@ export class PhotosService {
       `Photo uploaded: ${saved.id} (group=${groupId}, user=${uploaderId})`,
     );
     return saved;
-  }
-
-  private async deleteFiles(groupId: number, filename: string): Promise<void> {
-    const groupDir = path.join(UPLOAD_BASE, String(groupId));
-    const variants = ['original', 'medium', 'thumbnail'];
-    await Promise.all(
-      variants.map((v) =>
-        fs.unlink(path.join(groupDir, v, filename)).catch(() => {
-          /* file may not exist */
-        }),
-      ),
-    );
   }
 }

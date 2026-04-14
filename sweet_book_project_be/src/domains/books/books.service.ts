@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { SweetbookApiService } from '../../external/sweetbook/sweetbook.service';
+import { StorageService } from '../../common/storage/storage.service';
+import { photoObjectPath } from '../photos/photos.service';
 import { ForbiddenException, NotFoundException } from '../../common/exceptions';
 import { Book } from './entities/book.entity';
 import { BookPage } from './entities/book-page.entity';
@@ -36,8 +36,6 @@ interface BookSpec {
   [key: string]: unknown;
 }
 
-const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'photos');
-
 @Injectable()
 export class BooksService {
   private readonly logger = new Logger(BooksService.name);
@@ -53,6 +51,7 @@ export class BooksService {
     private readonly groupMemberRepository: Repository<GroupMember>,
     private readonly sweetbookApiService: SweetbookApiService,
     private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
     private readonly notificationsService: NotificationsService,
     private readonly activitiesService: ActivitiesService,
     private readonly coverVotingService: CoverVotingService,
@@ -379,14 +378,10 @@ export class BooksService {
       if (!page.photo) continue;
       if (uploadedFileNames.has(page.photo.id)) continue;
 
-      const filePath = path.join(
-        UPLOAD_BASE,
-        String(page.photo.groupId),
-        'original',
-        page.photo.filename,
-      );
       try {
-        const buffer = await fs.readFile(filePath);
+        const buffer = await this.storageService.download(
+          photoObjectPath(page.photo.groupId, 'original', page.photo.filename),
+        );
         const result = await this.sweetbookApiService.uploadPhotoToBook(
           book.sweetbookBookUid,
           buffer,
@@ -437,13 +432,9 @@ export class BooksService {
         delete coverParams[fk];
         continue;
       }
-      const filePath = path.join(
-        UPLOAD_BASE,
-        String(photo.groupId),
-        'original',
-        photo.filename,
+      const buffer = await this.storageService.download(
+        photoObjectPath(photo.groupId, 'original', photo.filename),
       );
-      const buffer = await fs.readFile(filePath);
       const uploaded = await this.sweetbookApiService.uploadPhotoToBook(
         book.sweetbookBookUid,
         buffer,
@@ -670,11 +661,11 @@ export class BooksService {
       relations: ['photo'],
       order: { pageNumber: 'ASC' },
     });
-    const baseUrl = this.configService.getOrThrow<string>('BASE_URL');
+    const publicBase = this.storageService.getPublicBase();
 
     const photoUrls = (photo: { groupId: number; filename: string }) => ({
-      thumbnailUrl: `${baseUrl}/uploads/photos/${photo.groupId}/thumbnail/${photo.filename}`,
-      mediumUrl: `${baseUrl}/uploads/photos/${photo.groupId}/medium/${photo.filename}`,
+      thumbnailUrl: `${publicBase}/photos/${photo.groupId}/thumbnail/${photo.filename}`,
+      mediumUrl: `${publicBase}/photos/${photo.groupId}/medium/${photo.filename}`,
     });
 
     // 표지 합성 페이지 생성 (coverPhotoId 또는 coverParams의 숫자형 photo id 활용)
