@@ -7,7 +7,7 @@ import { PhotoFaceDetectionService } from './photo-face-detection.service';
 export interface PhotoFaceJob {
   photoId: number;
   groupId: number;
-  imagePath: string;
+  objectPath: string;
 }
 
 @Processor(QUEUE_NAMES.PHOTO_FACE)
@@ -18,11 +18,11 @@ export class PhotoFaceProcessor {
 
   @Process('detect')
   async handleDetect(job: Job<PhotoFaceJob>) {
-    const { photoId, groupId, imagePath } = job.data;
+    const { photoId, groupId, objectPath } = job.data;
     const count = await this.faceDetection.detectAndStore(
       photoId,
       groupId,
-      imagePath,
+      objectPath,
     );
     this.logger.log(`[job ${job.id}] photo=${photoId} faces=${count}`);
     return { photoId, detected: count };

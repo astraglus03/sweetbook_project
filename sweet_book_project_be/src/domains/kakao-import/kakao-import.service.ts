@@ -5,28 +5,19 @@ import AdmZip from 'adm-zip';
 import * as path from 'path';
 import sharp from 'sharp';
 import { Photo } from '../photos/entities/photo.entity';
-import { GroupMember } from '../groups/entities/group-member.entity';
-import { User } from '../users/entities/user.entity';
-import {
-  parseKakaoTxt,
-  extractImageTimestamp,
-  normalizeKakaoName,
-  ParsedPhotoMessage,
-} from './kakao-parser';
 import { ValidationException } from '../../common/exceptions';
 import { StorageService } from '../../common/storage/storage.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { photoObjectPath } from '../photos/photos.service';
+import { PhotoFaceDetectionService } from '../photos/photo-face-detection.service';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
-const MAX_ZIP_SIZE = 100 * 1024 * 1024; // 100MB (MVP)
+const MAX_ZIP_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB per image
 
 export interface ImportResult {
   totalPhotos: number;
   savedPhotos: number;
-  matchedPhotos: number;
-  unmatchedNames: string[];
 }
 
 @Injectable()
@@ -36,12 +27,9 @@ export class KakaoImportService {
   constructor(
     @InjectRepository(Photo)
     private readonly photoRepository: Repository<Photo>,
-    @InjectRepository(GroupMember)
-    private readonly groupMemberRepository: Repository<GroupMember>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly storageService: StorageService,
     private readonly activitiesService: ActivitiesService,
+    private readonly photoFaceDetection: PhotoFaceDetectionService,
   ) {}
 
   async importZip(
@@ -52,15 +40,9 @@ export class KakaoImportService {
     this.validateZipFile(file);
 
     const zip = new AdmZip(file.buffer);
-    const entries = zip.getEntries();
-
-    // txt + 이미지 엔트리 수집
-    const txtEntries = entries.filter(
-      (e) => !e.isDirectory && e.entryName.toLowerCase().endsWith('.txt'),
-    );
-    const imageEntries = entries.filter((e) => {
+    const imageEntries = zip.getEntries().filter((e) => {
       if (e.isDirectory) return false;
-      if (e.entryName.includes('..')) return false; // path traversal 방지
+      if (e.entryName.includes('..')) return false;
       const ext = path.extname(e.entryName).toLowerCase();
       return IMAGE_EXTENSIONS.has(ext);
     });
@@ -72,77 +54,25 @@ export class KakaoImportService {
       );
     }
 
-    // txt 파싱
-    let messages: ParsedPhotoMessage[] = [];
-    if (txtEntries.length > 0) {
-      const txtContent = txtEntries[0].getData().toString('utf-8');
-      messages = parseKakaoTxt(txtContent);
-    } else {
-      this.logger.warn(
-        `No txt in zip — uploading ${imageEntries.length} images without uploader match`,
-      );
-    }
-
-    // 이미지-메시지 매칭
-    const imagesWithName = this.matchImagesToMessages(imageEntries, messages);
-
-    // 그룹 멤버 로드 (이름 기반 자동 매칭용)
-    const members = await this.groupMemberRepository.find({
-      where: { groupId },
-      relations: ['user'],
-    });
-
-    const memberByUserId = new Map(members.map((m) => [m.userId, m]));
-    const memberByNormalized = new Map(
-      members.map((m) => [normalizeKakaoName(m.user?.name ?? ''), m.userId]),
-    );
-
     let savedCount = 0;
-    let matchedCount = 0;
-    const unmatchedSet = new Set<string>();
-
-    for (const img of imagesWithName) {
+    for (const entry of imageEntries) {
       try {
-        const buffer = img.entry.getData();
+        const buffer = entry.getData();
         if (buffer.length > MAX_IMAGE_SIZE) {
-          this.logger.warn(`Skipping oversized image: ${img.entry.entryName}`);
+          this.logger.warn(`Skipping oversized image: ${entry.entryName}`);
           continue;
         }
-
-        // 자동 매칭: 멤버 이름과 정확 일치
-        let uploaderId: number | null = null;
-        const kakaoName = img.kakaoName ?? null;
-        if (kakaoName) {
-          const normalized = normalizeKakaoName(kakaoName);
-          const memberUserId = memberByNormalized.get(normalized);
-          if (memberUserId !== undefined && memberByUserId.has(memberUserId)) {
-            uploaderId = memberUserId;
-          }
-        }
-
-        if (uploaderId) {
-          matchedCount++;
-        } else if (kakaoName) {
-          unmatchedSet.add(kakaoName);
-        }
-
-        await this.saveImage(
-          groupId,
-          uploaderId,
-          kakaoName,
-          img.entry.entryName,
-          buffer,
-        );
+        await this.saveImage(groupId, entry.entryName, buffer);
         savedCount++;
       } catch (err) {
         this.logger.error(
-          `Failed to save image ${img.entry.entryName}: ${String(err)}`,
+          `Failed to save image ${entry.entryName}: ${String(err)}`,
         );
       }
     }
 
     this.logger.log(
-      `Kakao import done: group=${groupId}, importer=${importerId}, total=${imagesWithName.length}, saved=${savedCount}, matched=${matchedCount}`,
+      `Kakao import done: group=${groupId}, importer=${importerId}, total=${imageEntries.length}, saved=${savedCount}`,
     );
 
     await this.activitiesService.record({
@@ -153,10 +83,8 @@ export class KakaoImportService {
     });
 
     return {
-      totalPhotos: imagesWithName.length,
+      totalPhotos: imageEntries.length,
       savedPhotos: savedCount,
-      matchedPhotos: matchedCount,
-      unmatchedNames: [...unmatchedSet],
     };
   }
 
@@ -187,46 +115,12 @@ export class KakaoImportService {
     }
   }
 
-  private matchImagesToMessages(
-    imageEntries: AdmZip.IZipEntry[],
-    messages: ParsedPhotoMessage[],
-  ): Array<{ entry: AdmZip.IZipEntry; kakaoName: string | null }> {
-    // timestamp 근사 매칭 (±60초). 메시지 수 ≠ 이미지 수인 경우에도 안전하게 동작.
-    const TOLERANCE_MS = 60_000;
-    const messagesSorted = [...messages].sort(
-      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-    );
-
-    return imageEntries.map((entry) => {
-      const imgTs =
-        extractImageTimestamp(entry.entryName) ?? entry.header.time.getTime();
-
-      // 근접한 메시지 찾기 — 이진 탐색 대신 선형(수량 100장 내외)
-      let best: ParsedPhotoMessage | null = null;
-      let bestDiff = Number.POSITIVE_INFINITY;
-      for (const m of messagesSorted) {
-        const diff = Math.abs(m.timestamp.getTime() - imgTs);
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          best = m;
-        }
-      }
-
-      const kakaoName =
-        best && bestDiff <= TOLERANCE_MS ? best.uploaderName : null;
-      return { entry, kakaoName };
-    });
-  }
-
   private async saveImage(
     groupId: number,
-    uploaderId: number | null,
-    kakaoName: string | null,
     originalFilename: string,
     buffer: Buffer,
   ): Promise<void> {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-    // rotate(): EXIF orientation 반영 후 Sharp는 기본적으로 모든 메타데이터(EXIF GPS 포함)를 제거한다.
     const base = sharp(buffer).rotate().webp({ quality: 85 });
     const metadata = await sharp(buffer).metadata();
 
@@ -236,12 +130,9 @@ export class KakaoImportService {
       base.clone().resize(200, 200, { fit: 'cover' }).toBuffer(),
     ]);
 
+    const originalPath = photoObjectPath(groupId, 'original', uniqueName);
     await Promise.all([
-      this.storageService.upload(
-        photoObjectPath(groupId, 'original', uniqueName),
-        originalBuf,
-        'image/webp',
-      ),
+      this.storageService.upload(originalPath, originalBuf, 'image/webp'),
       this.storageService.upload(
         photoObjectPath(groupId, 'medium', uniqueName),
         mediumBuf,
@@ -256,8 +147,7 @@ export class KakaoImportService {
 
     const photo = this.photoRepository.create({
       groupId,
-      uploaderId,
-      kakaoName,
+      uploaderId: null,
       filename: uniqueName,
       originalFilename: originalFilename.split('/').pop() ?? originalFilename,
       mimetype: 'image/webp',
@@ -265,6 +155,8 @@ export class KakaoImportService {
       width: metadata.width ?? null,
       height: metadata.height ?? null,
     });
-    await this.photoRepository.save(photo);
+    const saved = await this.photoRepository.save(photo);
+
+    this.photoFaceDetection.fireAndForget(saved.id, groupId, originalPath);
   }
 }
