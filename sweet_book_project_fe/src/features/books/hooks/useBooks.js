@@ -113,6 +113,7 @@ export function useDeleteBook(groupId) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['books', 'group', groupId] });
       queryClient.invalidateQueries({ queryKey: ['books', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', groupId, 'personal-book'] });
     },
   });
 }

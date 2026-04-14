@@ -310,10 +310,12 @@ export function BookEditorPage() {
   const pages = pagesData ?? [];
   const photos = photosData?.photos ?? [];
   const theme = book?.theme;
-  const isDraft = book?.status === 'DRAFT';
+  const isDraft =
+    book?.status === 'DRAFT' || book?.status === 'READY_TO_REVIEW';
   const isFailed = book?.status === 'FAILED';
   const isEditable = isDraft;
-  const isFinalized = !isDraft && !isFailed;
+  const isFinalized =
+    book?.status === 'READY' || book?.status === 'ORDERED';
   const bookSpecUid = book?.bookSpecUid;
   const aspectRatio = SPEC_ASPECT_RATIO[bookSpecUid] ?? 0.75;
 

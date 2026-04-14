@@ -69,7 +69,16 @@ export class Book {
 
   @Column({
     type: 'enum',
-    enum: ['DRAFT', 'UPLOADING', 'PROCESSING', 'READY', 'ORDERED', 'FAILED'],
+    enum: [
+      'DRAFT',
+      'UPLOADING',
+      'PROCESSING',
+      'READY',
+      'ORDERED',
+      'FAILED',
+      'AUTO_GENERATING',
+      'READY_TO_REVIEW',
+    ],
     default: 'DRAFT',
   })
   status: BookStatus;

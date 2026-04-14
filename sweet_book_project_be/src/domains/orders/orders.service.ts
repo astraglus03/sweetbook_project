@@ -56,6 +56,11 @@ export class OrdersService {
 
     const book = await this.findBookOrFail(orderGroup.bookId);
 
+    if (book.bookType === 'PERSONAL') {
+      // 개인 포토북은 본인만 수령자이므로 독촉 대상이 없음
+      return { remindedCount: 0 };
+    }
+
     const members = await this.groupMemberRepository.find({
       where: { groupId: orderGroup.groupId },
       relations: ['user'],
@@ -130,6 +135,13 @@ export class OrdersService {
       );
     }
 
+    if (book.bookType === 'PERSONAL' && book.ownerUserId !== userId) {
+      throw new ForbiddenException(
+        'PERSONAL_BOOK_NOT_OWNER',
+        '개인 포토북은 본인만 주문할 수 있습니다',
+      );
+    }
+
     const existing = await this.orderGroupRepository.findOne({
       where: { bookId },
     });
@@ -161,19 +173,23 @@ export class OrdersService {
 
     const saved = await this.orderGroupRepository.save(orderGroup);
 
-    // 그룹 멤버 전체에게 주문 참여 알림 발송
-    const members = await this.groupMemberRepository.find({
-      where: { groupId },
-    });
-    for (const member of members) {
-      if (member.userId === userId) continue; // 제작자 본인 제외
-      await this.notificationsService.createNotification({
-        userId: member.userId,
-        groupId,
-        type: 'ORDER_COLLECTING',
-        title: `포토북 주문이 시작되었습니다`,
-        message: `"${book.title}" 포토북의 주문 수집이 시작되었습니다. 배송지를 입력하거나 수령을 거절해주세요.`,
+    if (book.bookType === 'PERSONAL') {
+      // 개인 포토북: 본인만 수령자이므로 별도 알림 불필요 (본인이 시작했음)
+    } else {
+      // 단체 포토북: 그룹 멤버 전체에게 주문 참여 알림 발송
+      const members = await this.groupMemberRepository.find({
+        where: { groupId },
       });
+      for (const member of members) {
+        if (member.userId === userId) continue; // 제작자 본인 제외
+        await this.notificationsService.createNotification({
+          userId: member.userId,
+          groupId,
+          type: 'ORDER_COLLECTING',
+          title: `포토북 주문이 시작되었습니다`,
+          message: `"${book.title}" 포토북의 주문 수집이 시작되었습니다. 배송지를 입력하거나 수령을 거절해주세요.`,
+        });
+      }
     }
 
     return this.getOrderGroupDetail(saved.id);
@@ -208,6 +224,14 @@ export class OrdersService {
       throw new ForbiddenException(
         'ORDER_GROUP_NOT_COLLECTING',
         '배송 정보 수집 중이 아닙니다',
+      );
+    }
+
+    const book = await this.findBookOrFail(orderGroup.bookId);
+    if (book.bookType === 'PERSONAL' && book.ownerUserId !== userId) {
+      throw new ForbiddenException(
+        'PERSONAL_BOOK_NOT_OWNER',
+        '개인 포토북은 본인만 배송지를 입력할 수 있습니다',
       );
     }
 
@@ -571,6 +595,14 @@ export class OrdersService {
       );
     }
 
+    const book = await this.findBookOrFail(orderGroup.bookId);
+    if (book.bookType === 'PERSONAL' && book.ownerUserId !== userId) {
+      throw new ForbiddenException(
+        'PERSONAL_BOOK_NOT_OWNER',
+        '개인 포토북은 본인만 거절할 수 있습니다',
+      );
+    }
+
     // 이미 주문 레코드가 있는 경우 상태 변경
     let order = await this.orderRepository.findOne({
       where: { orderGroupId, ordererId: userId },
@@ -611,11 +643,17 @@ export class OrdersService {
     const orderGroup = await this.findOrderGroupOrFail(orderGroupId);
     const isCreator = orderGroup.initiatedBy === userId;
 
-    // 그룹의 전체 멤버 조회
-    const members = await this.groupMemberRepository.find({
+    const book = await this.findBookOrFail(orderGroup.bookId);
+
+    // 그룹의 전체 멤버 조회 (개인 포토북은 owner 한 명만 노출)
+    const allMembers = await this.groupMemberRepository.find({
       where: { groupId: orderGroup.groupId },
       relations: ['user'],
     });
+    const members =
+      book.bookType === 'PERSONAL'
+        ? allMembers.filter((m) => m.userId === book.ownerUserId)
+        : allMembers;
 
     // 해당 주문 그룹의 주문 목록
     const orders = await this.orderRepository.find({
