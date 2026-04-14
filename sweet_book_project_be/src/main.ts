@@ -1,3 +1,8 @@
+import * as dns from 'dns';
+// Railway 등 IPv6 egress 없는 환경에서 ENETUNREACH 방지 — 모든 DNS lookup을 IPv4 우선으로.
+// Node 17+부터 기본이 'verbatim'으로 바뀌어 Linux에서 IPv6가 먼저 반환되는 문제.
+dns.setDefaultResultOrder('ipv4first');
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
