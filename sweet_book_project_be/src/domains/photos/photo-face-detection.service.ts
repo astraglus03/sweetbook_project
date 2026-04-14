@@ -5,6 +5,7 @@ import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { PhotoFace } from './entities/photo-face.entity';
 import { FaceApiService } from '../../external/face-api/face-api.service';
+import { StorageService } from '../../common/storage/storage.service';
 import { QUEUE_NAMES } from '../../config/bull.config';
 
 const MIN_CONFIDENCE = 0.7;
@@ -17,6 +18,7 @@ export class PhotoFaceDetectionService {
     @InjectRepository(PhotoFace)
     private readonly photoFaceRepo: Repository<PhotoFace>,
     private readonly faceApi: FaceApiService,
+    private readonly storageService: StorageService,
     @InjectQueue(QUEUE_NAMES.PHOTO_FACE)
     private readonly queue: Queue,
   ) {}
@@ -24,15 +26,15 @@ export class PhotoFaceDetectionService {
   async enqueue(
     photoId: number,
     groupId: number,
-    imagePath: string,
+    objectPath: string,
   ): Promise<void> {
-    await this.queue.add('detect', { photoId, groupId, imagePath });
+    await this.queue.add('detect', { photoId, groupId, objectPath });
   }
 
   async detectAndStore(
     photoId: number,
     groupId: number,
-    imagePath: string,
+    objectPath: string,
   ): Promise<number> {
     if (!this.faceApi.isReady()) {
       this.logger.debug(`FaceApi 미준비 상태 — 사진 ${photoId} 얼굴 감지 스킵`);
@@ -40,7 +42,8 @@ export class PhotoFaceDetectionService {
     }
 
     try {
-      const faces = await this.faceApi.detectAll(imagePath);
+      const buffer = await this.storageService.download(objectPath);
+      const faces = await this.faceApi.detectAll(buffer);
       const kept = faces.filter((f) => f.confidence >= MIN_CONFIDENCE);
 
       if (kept.length === 0) return 0;
@@ -71,8 +74,8 @@ export class PhotoFaceDetectionService {
     }
   }
 
-  fireAndForget(photoId: number, groupId: number, imagePath: string): void {
-    void this.enqueue(photoId, groupId, imagePath).catch((err) => {
+  fireAndForget(photoId: number, groupId: number, objectPath: string): void {
+    void this.enqueue(photoId, groupId, objectPath).catch((err) => {
       this.logger.error(`큐 enqueue 실패: ${(err as Error).message}`);
     });
   }

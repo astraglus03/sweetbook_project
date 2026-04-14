@@ -13,6 +13,7 @@ import {
 } from '../../common/exceptions';
 import { StorageService } from '../../common/storage/storage.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { PhotoFaceDetectionService } from './photo-face-detection.service';
 
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -35,6 +36,7 @@ export class PhotosService {
     private readonly photoRepository: Repository<Photo>,
     private readonly storageService: StorageService,
     private readonly activitiesService: ActivitiesService,
+    private readonly photoFaceDetection: PhotoFaceDetectionService,
   ) {
     this.publicBase = this.storageService.getPublicBase();
   }
@@ -251,12 +253,9 @@ export class PhotosService {
       base.clone().resize(200, 200, { fit: 'cover' }).toBuffer(),
     ]);
 
+    const originalPath = photoObjectPath(groupId, 'original', uniqueName);
     await Promise.all([
-      this.storageService.upload(
-        photoObjectPath(groupId, 'original', uniqueName),
-        originalBuf,
-        'image/webp',
-      ),
+      this.storageService.upload(originalPath, originalBuf, 'image/webp'),
       this.storageService.upload(
         photoObjectPath(groupId, 'medium', uniqueName),
         mediumBuf,
@@ -285,6 +284,9 @@ export class PhotosService {
     this.logger.log(
       `Photo uploaded: ${saved.id} (group=${groupId}, user=${uploaderId})`,
     );
+
+    this.photoFaceDetection.fireAndForget(saved.id, groupId, originalPath);
+
     return saved;
   }
 }
