@@ -2,10 +2,11 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
 import * as faceapi from '@vladmandic/face-api';
-import '@tensorflow/tfjs-node';
-import { Canvas, Image, ImageData, loadImage } from 'canvas';
+import * as tf from '@tensorflow/tfjs-node';
+import { Canvas, Image, ImageData } from 'canvas';
+import sharp from 'sharp';
 
-type FaceInput = string | Buffer;
+type FaceInput = Buffer;
 
 export interface DetectedFace {
   embedding: number[];
@@ -59,22 +60,38 @@ export class FaceApiService implements OnModuleInit {
   async detectAll(input: FaceInput): Promise<DetectedFace[]> {
     if (!this.initialized) await this.init();
 
-    const img = await loadImage(input);
-    const results = await faceapi
-      .detectAllFaces(img as unknown as faceapi.TNetInput)
-      .withFaceLandmarks()
-      .withFaceDescriptors();
+    const { data, info } = await sharp(input)
+      .rotate()
+      .removeAlpha()
+      .toColorspace('srgb')
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-    return results.map((r) => ({
-      embedding: Array.from(r.descriptor),
-      bbox: {
-        x: Math.round(r.detection.box.x),
-        y: Math.round(r.detection.box.y),
-        width: Math.round(r.detection.box.width),
-        height: Math.round(r.detection.box.height),
-      },
-      confidence: r.detection.score,
-    }));
+    const tensor = tf.tensor3d(
+      new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+      [info.height, info.width, 3],
+      'int32',
+    );
+
+    try {
+      const results = await faceapi
+        .detectAllFaces(tensor as unknown as faceapi.TNetInput)
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      return results.map((r) => ({
+        embedding: Array.from(r.descriptor),
+        bbox: {
+          x: Math.round(r.detection.box.x),
+          y: Math.round(r.detection.box.y),
+          width: Math.round(r.detection.box.width),
+          height: Math.round(r.detection.box.height),
+        },
+        confidence: r.detection.score,
+      }));
+    } finally {
+      tensor.dispose();
+    }
   }
 
   async detectSingle(input: FaceInput): Promise<DetectedFace | null> {
