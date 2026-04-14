@@ -18,7 +18,7 @@ import {
 import { ActivitiesService } from '../activities/activities.service';
 
 // TEMP_TEST_THRESHOLD: 테스트용 완화값. 원복 시 MIN_PAGES = 12 로 되돌릴 것
-const MIN_PAGES = 1;
+const MIN_PAGES = 12;
 const MAX_PHOTOS = 130;
 const DEFAULT_BOOK_SPEC = 'SQUAREBOOK_HC';
 
