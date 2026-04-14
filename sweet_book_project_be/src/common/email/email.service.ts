@@ -21,13 +21,11 @@ export class EmailService {
     );
 
     if (host && user && pass) {
-      // Railway 등 IPv6 egress 없는 환경에서 ENETUNREACH 방지 (family: 4로 IPv4 강제)
       this.transporter = nodemailer.createTransport({
         host,
         port,
         secure: port === 465,
         auth: { user, pass },
-        ...({ family: 4 } as object),
       });
       this.logger.log(`SMTP configured: ${host}:${port}`);
     } else {
