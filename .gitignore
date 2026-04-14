@@ -9,6 +9,8 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.local
 
 # Uploads (로컬 저장소)
 uploads/
