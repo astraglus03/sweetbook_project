@@ -169,6 +169,7 @@ export default function OrderPage() {
   }
 
   const specLabel = SPEC_LABEL[book.bookSpecUid] || book.bookSpecUid;
+  const isPersonal = book.bookType === 'PERSONAL';
   const isReady = book.status === 'READY' || book.status === 'ORDERED';
   const hasOrderGroup = orderGroup && !ogNotFound;
   const orders = hasOrderGroup ? orderGroup.orders ?? [] : [];
@@ -235,7 +236,7 @@ export default function OrderPage() {
           뒤로
         </button>
         <h1 className="text-[22px] font-bold text-ink">
-          {isOrdered ? '주문 현황' : '주문 정보 수집'}
+          {isOrdered ? '주문 현황' : isPersonal ? '개인 포토북 주문' : '주문 정보 수집'}
         </h1>
         <p className="text-sm text-ink-sub mt-1">
           {book.title} · {specLabel} {book.pageCount}페이지
@@ -263,7 +264,11 @@ export default function OrderPage() {
               <div className="flex-1 text-center lg:text-left">
                 <h2 className="text-xl font-bold text-ink mb-1">{book.title}</h2>
                 <p className="text-sm text-ink-sub mb-4">{specLabel} · {book.pageCount}페이지 · 권당 {unitPrice ? `${unitPrice.toLocaleString()}원` : '-'}</p>
-                <p className="text-sm text-ink-sub mb-5">주문을 시작하고 멤버들에게 배송 정보를 요청하세요.</p>
+                <p className="text-sm text-ink-sub mb-5">
+                  {isPersonal
+                    ? '내 개인 포토북 주문을 시작하고 배송지를 입력하세요.'
+                    : '주문을 시작하고 멤버들에게 배송 정보를 요청하세요.'}
+                </p>
                 <div className="flex gap-2 justify-center lg:justify-start">
                   <button type="button" onClick={() => setShowPreview(true)}
                     className="h-11 px-5 rounded-full border border-warm-border text-sm font-medium text-ink hover:bg-warm-bg transition-colors">
@@ -271,7 +276,7 @@ export default function OrderPage() {
                   </button>
                   <button type="button" onClick={handleCreateOrderGroup} disabled={createOg.isPending}
                     className="h-11 px-6 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50">
-                    {createOg.isPending ? '생성 중…' : '주문 시작하고 멤버 초대'}
+                    {createOg.isPending ? '생성 중…' : isPersonal ? '내 포토북 주문하기' : '주문 시작하고 멤버 초대'}
                   </button>
                 </div>
               </div>
@@ -342,7 +347,7 @@ export default function OrderPage() {
                           className="h-10 px-5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover transition-colors">
                           {hasSubmitted ? '배송 정보 수정' : isRejected ? '다시 참여하기' : '배송지 입력'}
                         </button>
-                        {!isRejected && (
+                        {!isRejected && !isPersonal && (
                           <button type="button" onClick={handleReject} disabled={rejectOrder.isPending}
                             className="h-10 px-5 rounded-full border border-warm-border bg-white text-sm font-medium text-ink-sub hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
                             수령 안 함
@@ -355,9 +360,10 @@ export default function OrderPage() {
               </div>
             )}
 
-            {/* 주문 접수 현황 + 주문 요약 2-col */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* Left: 접수 현황 + 멤버 리스트 */}
+            {/* 주문 접수 현황 + 주문 요약 2-col (개인 포토북은 요약만) */}
+            <div className={`grid grid-cols-1 gap-5 ${isPersonal ? '' : 'lg:grid-cols-3'}`}>
+              {/* Left: 접수 현황 + 멤버 리스트 (단체 포토북만) */}
+              {!isPersonal && (
               <div className="lg:col-span-2 bg-white rounded-2xl border border-warm-border p-5 lg:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-bold text-ink">주문 접수 현황</h3>
@@ -423,6 +429,7 @@ export default function OrderPage() {
                   </ul>
                 )}
               </div>
+              )}
 
               {/* Right: 주문 요약 */}
               <div className="bg-white rounded-2xl border border-warm-border p-5 lg:p-6 h-fit lg:sticky lg:top-6">
@@ -462,7 +469,7 @@ export default function OrderPage() {
                 {/* Creator CTA */}
                 {orderGroup.status === 'COLLECTING' && isCreator && (
                   <div className="mt-5 space-y-2">
-                    {!allResponded && (
+                    {!isPersonal && !allResponded && (
                       <p className="text-[11px] text-amber-600 text-center font-medium">
                         모든 멤버가 응답해야 결제할 수 있어요
                       </p>
@@ -470,7 +477,7 @@ export default function OrderPage() {
                     <button type="button" onClick={handleConfirm}
                       disabled={confirmAndPlace.isPending || totalQuantity === 0 || !allResponded}
                       className="w-full h-12 rounded-full bg-brand text-white text-[15px] font-semibold hover:bg-brand-hover transition-colors disabled:bg-warm-border disabled:text-ink-muted disabled:cursor-not-allowed shadow-sm">
-                      {confirmAndPlace.isPending ? '주문 처리 중…' : '전체 주문 확정'}
+                      {confirmAndPlace.isPending ? '주문 처리 중…' : isPersonal ? '주문 확정' : '전체 주문 확정'}
                     </button>
                     <button type="button" onClick={() => navigate('/orders')}
                       className="w-full h-10 rounded-full text-ink-sub text-xs font-medium hover:bg-warm-bg transition-colors">
@@ -479,7 +486,7 @@ export default function OrderPage() {
                   </div>
                 )}
 
-                {orderGroup.status === 'COLLECTING' && !isCreator && (
+                {orderGroup.status === 'COLLECTING' && !isCreator && !isPersonal && (
                   <p className="mt-5 text-[11px] text-ink-muted text-center py-3 bg-warm-bg/60 rounded-lg">
                     결제는 주문을 시작한 사람만 진행할 수 있어요
                   </p>

@@ -40,6 +40,7 @@ export function PersonalBookReviewPage() {
     }
   };
 
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-warm-bg flex items-center justify-center">
@@ -64,7 +65,9 @@ export function PersonalBookReviewPage() {
     );
   }
 
-  const photoPages = (pages ?? []).filter((p) => p.photoId && p.photo);
+  const photoPages = (pages ?? []).filter(
+    (p) => p.photoId && !p.isCover && (p.thumbnailUrl || p.mediumUrl),
+  );
 
   return (
     <div className="min-h-screen bg-warm-bg">
@@ -93,8 +96,8 @@ export function PersonalBookReviewPage() {
           </p>
           <p>
             잘못 매칭된 사진이 있으면 <strong>✕ 버튼</strong>으로 제외할 수
-            있어요. 모두 확인한 뒤 <strong>편집하기</strong>에서 페이지 순서나
-            레이아웃을 바꿀 수 있어요.
+            있어요. 확인이 끝나면 <strong>편집하기</strong>에서 페이지 순서/텍스트/레이아웃을
+            다듬은 뒤 최종화하세요.
           </p>
         </div>
 
@@ -112,10 +115,8 @@ export function PersonalBookReviewPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {photoPages.map((page) => {
-            const photo = page.photo;
-            const thumb =
-              photo.thumbnailUrl ?? photo.mediumUrl ?? photo.originalUrl;
-            const isRemoving = removingId === photo.id;
+            const thumb = page.thumbnailUrl ?? page.mediumUrl;
+            const isRemoving = removingId === page.photoId;
             return (
               <div
                 key={page.id}
@@ -128,7 +129,7 @@ export function PersonalBookReviewPage() {
                   loading="lazy"
                 />
                 <button
-                  onClick={() => handleExclude(photo.id)}
+                  onClick={() => handleExclude(page.photoId)}
                   disabled={isRemoving}
                   className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-red-500 text-white rounded-full w-7 h-7 text-xs flex items-center justify-center transition-colors disabled:opacity-50"
                   title="이 사람 나 아니에요"
@@ -145,9 +146,7 @@ export function PersonalBookReviewPage() {
 
         <div className="flex gap-2 sticky bottom-0 bg-warm-bg/80 backdrop-blur py-3 -mx-4 lg:-mx-8 px-4 lg:px-8 border-t border-[#E5E0D8]">
           <button
-            onClick={() =>
-              navigate(`/groups/${numGroupId}/books/personal`)
-            }
+            onClick={() => navigate(`/groups/${numGroupId}/books/personal`)}
             className="flex-1 border border-[#E5E0D8] rounded-xl py-3 font-semibold text-ink hover:bg-white"
           >
             목록으로

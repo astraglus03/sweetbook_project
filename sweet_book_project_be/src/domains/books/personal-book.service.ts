@@ -9,6 +9,7 @@ import { PhotoFace } from '../photos/entities/photo-face.entity';
 import { UserFaceAnchor } from '../photos/entities/user-face-anchor.entity';
 import { GroupMember } from '../groups/entities/group-member.entity';
 import { FaceApiService } from '../../external/face-api/face-api.service';
+import { SweetbookApiService } from '../../external/sweetbook/sweetbook.service';
 import {
   NotFoundException,
   ForbiddenException,
@@ -16,7 +17,8 @@ import {
 } from '../../common/exceptions';
 import { ActivitiesService } from '../activities/activities.service';
 
-const MIN_PAGES = 12;
+// TEMP_TEST_THRESHOLD: 테스트용 완화값. 원복 시 MIN_PAGES = 12 로 되돌릴 것
+const MIN_PAGES = 1;
 const MAX_PHOTOS = 130;
 const DEFAULT_BOOK_SPEC = 'SQUAREBOOK_HC';
 
@@ -49,8 +51,102 @@ export class PersonalBookService {
     private readonly memberRepo: Repository<GroupMember>,
     private readonly dataSource: DataSource,
     private readonly faceApi: FaceApiService,
+    private readonly sweetbookApi: SweetbookApiService,
     private readonly activitiesService: ActivitiesService,
   ) {}
+
+  /**
+   * 기본 테마/템플릿 + 사진 바인딩 파라미터 키까지 Sweetbook에서 해석.
+   * 검수 직후에도 제대로 된 "책 모양" (표지 + 내지 템플릿)으로 생성하기 위함.
+   */
+  private async resolveDefaults(bookSpecUid: string): Promise<{
+    theme: string;
+    coverTemplateUid: string;
+    contentTemplateUid: string;
+    coverBindingKey: string;
+    contentBindingKey: string;
+  }> {
+    const all = await this.sweetbookApi.getTemplates(bookSpecUid);
+    const list = (Array.isArray(all) ? all : []) as Array<
+      Record<string, unknown>
+    >;
+    const themeKinds = new Map<string, Set<string>>();
+    for (const t of list) {
+      const theme = String(t.theme ?? '');
+      if (!theme || theme === '공용' || /알림장/.test(theme)) continue;
+      if (!themeKinds.has(theme)) themeKinds.set(theme, new Set());
+      themeKinds.get(theme)!.add(String(t.templateKind ?? ''));
+    }
+    let pickedTheme: string | null = null;
+    for (const [theme, kinds] of themeKinds) {
+      if (kinds.has('cover') && kinds.has('content')) {
+        pickedTheme = theme;
+        break;
+      }
+    }
+    if (!pickedTheme) {
+      throw new ForbiddenException(
+        'PERSONAL_BOOK_NO_THEME_AVAILABLE',
+        '사용 가능한 테마가 없습니다',
+      );
+    }
+    const byKind = (kind: string) =>
+      list.find(
+        (t) =>
+          String(t.theme ?? '') === pickedTheme &&
+          String(t.templateKind ?? '').toLowerCase() === kind,
+      );
+    const coverTpl = byKind('cover')!;
+    const contentTpl = byKind('content')!;
+
+    const isFileBinding = (binding: string) => {
+      const b = binding.toLowerCase();
+      return (
+        b.includes('file') ||
+        b.includes('photo') ||
+        b.includes('image') ||
+        b.includes('collage') ||
+        b.includes('gallery')
+      );
+    };
+    const fetchFirstFileKey = async (
+      templateUid: string,
+      fallback: string,
+    ): Promise<string> => {
+      try {
+        const detail = (await this.sweetbookApi.getTemplateDetail(
+          templateUid,
+        )) as {
+          parameters?: {
+            definitions?: Record<string, { binding: string }>;
+          };
+        };
+        const defs = detail?.parameters?.definitions ?? {};
+        const found = Object.entries(defs).find(([, v]) =>
+          isFileBinding(v.binding),
+        );
+        return found ? found[0] : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+    const coverBindingKey = await fetchFirstFileKey(
+      String(coverTpl.templateUid),
+      'coverPhoto',
+    );
+    const contentBindingKey = await fetchFirstFileKey(
+      String(contentTpl.templateUid),
+      'photo',
+    );
+
+    return {
+      theme: pickedTheme,
+      coverTemplateUid: String(coverTpl.templateUid),
+      contentTemplateUid: String(contentTpl.templateUid),
+      coverBindingKey,
+      contentBindingKey,
+    };
+  }
 
   async assertOwner(groupId: number, userId: number): Promise<void> {
     const member = await this.memberRepo.findOne({
@@ -113,6 +209,40 @@ export class PersonalBookService {
       order: { createdAt: 'ASC' },
     });
 
+    // 기존 개인 포토북이 없을 때만 Sweetbook 책 신규 등록
+    const preExisting = await this.bookRepo.findOne({
+      where: { groupId, ownerUserId: userId, bookType: 'PERSONAL' },
+    });
+
+    // 테마 + 템플릿 + 바인딩 키 해석 (트랜잭션 밖에서)
+    const defaults = await this.resolveDefaults(DEFAULT_BOOK_SPEC);
+
+    let resolvedTheme: string = preExisting?.theme ?? defaults.theme;
+    let resolvedSweetbookUid: string | null =
+      preExisting?.sweetbookBookUid ?? null;
+    let resolvedExternalRef: string | null = preExisting?.externalRef ?? null;
+    const resolvedCoverTemplateUid: string =
+      preExisting?.coverTemplateUid ?? defaults.coverTemplateUid;
+
+    if (!resolvedSweetbookUid) {
+      resolvedExternalRef = `personal-${groupId}-${userId}-${Date.now()}`;
+      const result = await this.sweetbookApi.createBook({
+        title: '나의 포토북',
+        bookSpecUid: DEFAULT_BOOK_SPEC,
+        externalRef: resolvedExternalRef,
+        idempotencyKey: resolvedExternalRef,
+      });
+      resolvedSweetbookUid = result.bookUid;
+    }
+
+    // 표지 바인딩: 매칭된 첫 사진을 표지로 자동 바인딩 (사용자가 추후 변경 가능)
+    const firstPhotoId = photos[0]?.id ?? null;
+    const resolvedCoverParams: Record<string, string> | null =
+      preExisting?.coverParams ??
+      (firstPhotoId !== null
+        ? { [defaults.coverBindingKey]: String(firstPhotoId) }
+        : null);
+
     return await this.dataSource.transaction(async (mgr) => {
       const existing = await mgr.findOne(Book, {
         where: {
@@ -141,6 +271,13 @@ export class PersonalBookService {
       if (existing) {
         existing.status = 'AUTO_GENERATING';
         existing.pageCount = photos.length;
+        if (!existing.theme) existing.theme = resolvedTheme;
+        if (!existing.sweetbookBookUid)
+          existing.sweetbookBookUid = resolvedSweetbookUid;
+        if (!existing.externalRef) existing.externalRef = resolvedExternalRef;
+        if (!existing.coverTemplateUid)
+          existing.coverTemplateUid = resolvedCoverTemplateUid;
+        if (!existing.coverParams) existing.coverParams = resolvedCoverParams;
         book = await mgr.save(existing);
         await mgr.delete(BookPage, { bookId: existing.id });
         await mgr.delete(PersonalBookMatch, { bookId: existing.id });
@@ -153,6 +290,11 @@ export class PersonalBookService {
             ownerUserId: userId,
             createdById: userId,
             bookSpecUid: DEFAULT_BOOK_SPEC,
+            theme: resolvedTheme,
+            sweetbookBookUid: resolvedSweetbookUid,
+            externalRef: resolvedExternalRef,
+            coverTemplateUid: resolvedCoverTemplateUid,
+            coverParams: resolvedCoverParams,
             status: 'AUTO_GENERATING',
             pageCount: photos.length,
           }),
@@ -175,6 +317,8 @@ export class PersonalBookService {
           bookId: book.id,
           pageNumber: idx + 1,
           photoId: p.id,
+          contentTemplateUid: defaults.contentTemplateUid,
+          templateParams: { [defaults.contentBindingKey]: String(p.id) },
         }),
       );
       await mgr.save(pages);

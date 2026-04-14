@@ -63,9 +63,27 @@ export class PhotosService {
       }
     }
 
+    const skipped: Array<{ filename: string; reason: string }> = [];
     for (const file of files) {
-      const photo = await this.processAndSave(groupId, uploaderId, file);
-      results.push(PhotoResponseDto.from(photo, this.publicBase));
+      try {
+        const photo = await this.processAndSave(groupId, uploaderId, file);
+        results.push(PhotoResponseDto.from(photo, this.publicBase));
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `사진 처리 실패 (건너뜀): ${file.originalname} — ${reason}`,
+        );
+        skipped.push({ filename: file.originalname, reason });
+      }
+    }
+
+    if (results.length === 0 && skipped.length > 0) {
+      throw new ValidationException(
+        'PHOTO_ALL_FAILED',
+        `모든 사진 처리에 실패했습니다: ${skipped
+          .map((s) => s.filename)
+          .join(', ')}`,
+      );
     }
 
     await this.activitiesService.record({

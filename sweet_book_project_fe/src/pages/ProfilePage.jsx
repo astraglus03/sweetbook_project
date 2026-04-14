@@ -2,9 +2,41 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMe, useLogout } from '../features/auth/hooks/useAuth';
 import { useMyGroups } from '../features/groups/hooks/useGroups';
+import { useFaceAnchor } from '../features/books/personal/hooks/usePersonalBook';
 import { useThemeStore } from '../stores/theme.store';
 import { api } from '../lib/axios';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+
+function GroupAnchorRow({ group, onClick }) {
+  const { data: anchor } = useFaceAnchor(group.id);
+  const registered = !!anchor;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-3 bg-white border border-warm-border rounded-lg hover:border-brand hover:bg-brand/5 transition-colors text-left"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-lg bg-brand/10 flex-shrink-0 overflow-hidden flex items-center justify-center text-brand text-sm font-bold">
+          {group.coverImage ? (
+            <img src={group.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            group.name?.[0] ?? '?'
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink truncate">{group.name}</p>
+          <p className={`text-[11px] ${registered ? 'text-green-600' : 'text-ink-muted'}`}>
+            {registered ? '✓ 등록됨 · 수정하기' : '등록하러 가기 →'}
+          </p>
+        </div>
+      </div>
+      <svg className="w-4 h-4 text-ink-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+}
 
 const TABS = [
   { key: 'profile', label: '프로필', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
@@ -405,29 +437,11 @@ export default function ProfilePage() {
                 ) : (
                   <div className="space-y-2">
                     {groupsList.slice(0, 5).map((g) => (
-                      <button
+                      <GroupAnchorRow
                         key={g.id}
-                        type="button"
+                        group={g}
                         onClick={() => navigate(`/groups/${g.id}/face-anchor`)}
-                        className="w-full flex items-center justify-between p-3 bg-white border border-warm-border rounded-lg hover:border-brand hover:bg-brand/5 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-brand/10 flex-shrink-0 overflow-hidden flex items-center justify-center text-brand text-sm font-bold">
-                            {g.coverImage ? (
-                              <img src={g.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
-                            ) : (
-                              g.name?.[0] ?? '?'
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-ink truncate">{g.name}</p>
-                            <p className="text-[11px] text-ink-muted">등록하러 가기 →</p>
-                          </div>
-                        </div>
-                        <svg className="w-4 h-4 text-ink-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                      />
                     ))}
                   </div>
                 )}

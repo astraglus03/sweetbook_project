@@ -172,12 +172,24 @@ export class BooksService {
 
   async deleteBook(bookId: number, userId: number): Promise<void> {
     const book = await this.findBookOrFail(bookId);
-    this.verifyCreator(book, userId);
+    // PERSONAL 책은 owner 본인도 삭제 가능 (방장이 일괄 생성한 경우 createdBy != owner)
+    const isPersonalOwner =
+      book.bookType === 'PERSONAL' && book.ownerUserId === userId;
+    if (!isPersonalOwner) {
+      this.verifyCreator(book, userId);
+    }
 
-    if (book.status !== 'DRAFT' && book.status !== 'FAILED') {
+    const DELETABLE = new Set([
+      'DRAFT',
+      'FAILED',
+      'READY_TO_REVIEW',
+      'AUTO_GENERATING',
+      'READY',
+    ]);
+    if (!DELETABLE.has(book.status)) {
       throw new ForbiddenException(
         'BOOK_NOT_DELETABLE',
-        `DRAFT 또는 FAILED 상태만 삭제할 수 있습니다 (현재: ${book.status})`,
+        `주문 전 상태에서만 삭제할 수 있습니다 (현재: ${book.status})`,
       );
     }
 
@@ -192,6 +204,7 @@ export class BooksService {
       }
     }
 
+    // 개인 포토북 관련 데이터 정리 (외래키 제약)
     await this.bookPageRepository.delete({ bookId });
     await this.bookRepository.remove(book);
 
@@ -233,10 +246,10 @@ export class BooksService {
     const book = await this.findBookOrFail(bookId);
     this.verifyCreator(book, userId);
 
-    if (book.status !== 'DRAFT') {
+    if (book.status !== 'DRAFT' && book.status !== 'READY_TO_REVIEW') {
       throw new ForbiddenException(
         'BOOK_NOT_DRAFT',
-        `DRAFT 상태에서만 최종화할 수 있습니다 (현재: ${book.status})`,
+        `DRAFT 또는 READY_TO_REVIEW 상태에서만 최종화할 수 있습니다 (현재: ${book.status})`,
       );
     }
     if (!book.sweetbookBookUid) {
