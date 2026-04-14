@@ -231,12 +231,12 @@ export class AuthController {
 
   private baseCookieOptions(ttlSeconds: number): CookieOptions {
     const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    // 프로덕션: 크로스도메인(Vercel↔Railway) → SameSite=None + Secure 필수
+    // 로컬: 같은 localhost → lax (None+insecure 조합은 브라우저가 쿠키를 버림)
     return {
       httpOnly: true,
       secure: isProd,
-      // 버셀 + railway에서는 도메인이 달라서 none 같으면 lax
-      // sameSite: 'lax',
-      sameSite: 'none',
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
       maxAge: ttlSeconds * 1000,
     };

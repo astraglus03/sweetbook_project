@@ -38,8 +38,13 @@ export default function CreateGroupPage() {
       if (coverFile) {
         try {
           await uploadCover.mutateAsync({ groupId: group.id, file: coverFile });
-        } catch {
-          // 커버 업로드는 실패해도 그룹 생성은 성공으로 처리
+        } catch (err) {
+          console.error('cover upload failed', err?.response?.data ?? err);
+          alert(
+            `커버 이미지 업로드에 실패했어요: ${
+              err?.response?.data?.error?.message ?? err?.message ?? 'unknown'
+            }`,
+          );
         }
       }
       navigate(`/groups/${group.id}`);

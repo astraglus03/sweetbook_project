@@ -25,6 +25,7 @@ import { CoverVotingModule } from './domains/cover-voting/cover-voting.module';
 import { SweetbookModule } from './external/sweetbook/sweetbook.module';
 import { OpenAiModule } from './external/openai/openai.module';
 import { FaceApiModule } from './external/face-api/face-api.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { FaceApiModule } from './external/face-api/face-api.module';
       { name: 'upload', ttl: 60_000, limit: 30 },
     ]),
     RedisModule,
+    StorageModule,
     EmailModule,
     AuthModule,
     UsersModule,

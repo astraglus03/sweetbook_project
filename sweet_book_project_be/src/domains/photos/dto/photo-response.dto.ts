@@ -50,7 +50,7 @@ export class PhotoResponseDto {
   @ApiProperty()
   createdAt: Date;
 
-  static from(photo: Photo, baseUrl: string): PhotoResponseDto {
+  static from(photo: Photo, publicBase: string): PhotoResponseDto {
     const dto = new PhotoResponseDto();
     dto.id = photo.id;
     dto.groupId = photo.groupId;
@@ -63,9 +63,9 @@ export class PhotoResponseDto {
     dto.chapter = photo.chapter;
     dto.width = photo.width;
     dto.height = photo.height;
-    dto.thumbnailUrl = `${baseUrl}/uploads/photos/${photo.groupId}/thumbnail/${photo.filename}`;
-    dto.mediumUrl = `${baseUrl}/uploads/photos/${photo.groupId}/medium/${photo.filename}`;
-    dto.originalUrl = `${baseUrl}/uploads/photos/${photo.groupId}/original/${photo.filename}`;
+    dto.thumbnailUrl = `${publicBase}/photos/${photo.groupId}/thumbnail/${photo.filename}`;
+    dto.mediumUrl = `${publicBase}/photos/${photo.groupId}/medium/${photo.filename}`;
+    dto.originalUrl = `${publicBase}/photos/${photo.groupId}/original/${photo.filename}`;
     dto.uploaderName = photo.uploader?.name ?? photo.kakaoName ?? undefined;
     dto.createdAt = photo.createdAt;
     return dto;

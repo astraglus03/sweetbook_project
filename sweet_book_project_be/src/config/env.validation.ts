@@ -118,10 +118,18 @@ class EnvVariables {
   @IsString()
   OPENAI_API_KEY?: string;
 
-  // Base URL (이메일 링크/사진 URL 생성)
+  // Supabase Storage
   @IsNotEmpty()
   @IsString()
-  BASE_URL: string;
+  SUPABASE_URL: string;
+
+  @IsNotEmpty()
+  @IsString()
+  SUPABASE_SERVICE_ROLE_KEY: string;
+
+  @IsNotEmpty()
+  @IsString()
+  SUPABASE_STORAGE_BUCKET: string;
 }
 
 export const validateEnv = (config: Record<string, unknown>): EnvVariables => {

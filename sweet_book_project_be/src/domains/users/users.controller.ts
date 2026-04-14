@@ -10,7 +10,6 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
@@ -19,11 +18,10 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import sharp from 'sharp';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { StorageService } from '../../common/storage/storage.service';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -36,7 +34,7 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
-    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
   ) {}
 
   @Get('me/profile')
@@ -67,19 +65,17 @@ export class UsersController {
     @CurrentUser() user: User,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ProfileResponseDto> {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'profiles');
-    await fs.mkdir(uploadDir, { recursive: true });
-
-    const filename = `${user.id}.webp`;
-    const filePath = path.join(uploadDir, filename);
-
-    await sharp(file.buffer)
+    const buffer = await sharp(file.buffer)
       .resize(200, 200, { fit: 'cover' })
       .webp({ quality: 85 })
-      .toFile(filePath);
+      .toBuffer();
 
-    const baseUrl = this.configService.getOrThrow<string>('BASE_URL');
-    const avatarUrl = `${baseUrl}/uploads/profiles/${filename}`;
+    const objectPath = `profiles/${user.id}-${Date.now()}.webp`;
+    const avatarUrl = await this.storageService.upload(
+      objectPath,
+      buffer,
+      'image/webp',
+    );
 
     const updated = await this.usersService.updateAvatar(user.id, avatarUrl);
     return ProfileResponseDto.from(updated);

@@ -1,17 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { UserFaceAnchor } from './entities/user-face-anchor.entity';
 import { UserFaceAnchorSample } from './entities/user-face-anchor-sample.entity';
 import { FaceApiService } from '../../external/face-api/face-api.service';
+import { StorageService } from '../../common/storage/storage.service';
 import {
   ValidationException,
   NotFoundException,
 } from '../../common/exceptions';
-
-const ANCHOR_DIR = path.join(process.cwd(), 'uploads', 'face-anchors');
 
 @Injectable()
 export class FaceAnchorService {
@@ -23,6 +20,7 @@ export class FaceAnchorService {
     @InjectRepository(UserFaceAnchorSample)
     private readonly sampleRepo: Repository<UserFaceAnchorSample>,
     private readonly faceApi: FaceApiService,
+    private readonly storageService: StorageService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -45,8 +43,6 @@ export class FaceAnchorService {
       );
     }
 
-    await fs.mkdir(ANCHOR_DIR, { recursive: true });
-
     const embeddings: number[][] = [];
     const savedSamples: {
       embedding: number[];
@@ -55,31 +51,34 @@ export class FaceAnchorService {
     }[] = [];
 
     for (const file of files) {
-      const fname = `${userId}-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}.jpg`;
-      const fpath = path.join(ANCHOR_DIR, fname);
-      await fs.writeFile(fpath, file.buffer);
-
-      const faces = await this.faceApi.detectAll(fpath);
+      const faces = await this.faceApi.detectAll(file.buffer);
       if (faces.length === 0) {
-        await fs.unlink(fpath).catch(() => undefined);
         throw new ValidationException(
           'FACE_ANCHOR_NO_FACE',
           `얼굴이 감지되지 않았어요: ${file.originalname}`,
         );
       }
       if (faces.length > 1) {
-        await fs.unlink(fpath).catch(() => undefined);
         throw new ValidationException(
           'FACE_ANCHOR_MULTIPLE_FACES',
           `얼굴이 여러 개 감지됐어요. 본인만 나온 사진을 사용해주세요: ${file.originalname}`,
         );
       }
+
+      const fname = `${userId}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.jpg`;
+      const objectPath = `face-anchors/${fname}`;
+      await this.storageService.upload(
+        objectPath,
+        file.buffer,
+        file.mimetype || 'image/jpeg',
+      );
+
       embeddings.push(faces[0].embedding);
       savedSamples.push({
         embedding: faces[0].embedding,
-        sourcePath: fpath,
+        sourcePath: objectPath,
         confidence: faces[0].confidence,
       });
     }
@@ -96,6 +95,15 @@ export class FaceAnchorService {
         existing.embedding = avg;
         existing.sampleCount = embeddings.length;
         anchor = await mgr.save(existing);
+        const oldSamples = await mgr.find(UserFaceAnchorSample, {
+          where: { anchorId: existing.id },
+        });
+        const oldPaths = oldSamples
+          .map((s) => s.sourcePath)
+          .filter((p): p is string => Boolean(p));
+        if (oldPaths.length > 0) {
+          await this.storageService.remove(oldPaths);
+        }
         await mgr.delete(UserFaceAnchorSample, { anchorId: existing.id });
       } else {
         anchor = await mgr.save(
@@ -161,10 +169,11 @@ export class FaceAnchorService {
     const samples = await this.sampleRepo.find({
       where: { anchorId: anchor.id },
     });
-    for (const s of samples) {
-      if (s.sourcePath) {
-        await fs.unlink(s.sourcePath).catch(() => undefined);
-      }
+    const paths = samples
+      .map((s) => s.sourcePath)
+      .filter((p): p is string => Boolean(p));
+    if (paths.length > 0) {
+      await this.storageService.remove(paths);
     }
     await this.anchorRepo.remove(anchor);
   }
