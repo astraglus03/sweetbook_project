@@ -24,8 +24,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'serif'],
-        sans: ['Inter', 'sans-serif'],
+        display: ['"Pretendard Variable"', 'Pretendard', 'system-ui', 'sans-serif'],
+        sans: ['"Pretendard Variable"', 'Pretendard', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
     },
   },
