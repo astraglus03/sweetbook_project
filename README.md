@@ -198,16 +198,32 @@ curl -X PUT https://api-sandbox.sweetbook.com/v1/webhooks/config \
 
 ### 테스트 시나리오 (더미 데이터 미포함)
 
-별도 프리로드된 더미 데이터는 없습니다. 대신 심사자가 시나리오 문서를 따라 **회원가입 → 모임 생성 → 사진 업로드 → 포토북 편집 → 주문 → 표지 투표**를 직접 진행하면 모든 핵심 기능을 한 번에 검증할 수 있도록 구성했습니다.
+**자동 시드 스크립트**로 8개 계정·4개 모임·실제 Sweetbook 책/주문·얼굴 임베딩까지 한 번에 데모 환경이 박제됩니다. 심사자는 별도 가입·업로드 없이 바로 로그인해서 모든 화면 검증 가능.
 
-👉 [`docs/test-scenarios.md`](./docs/test-scenarios.md)
+```bash
+cd sweet_book_project_be
+npm run seed:demo -- --target=local --reset          # 로컬 검증
+npm run seed:demo -- --target=production --reset     # Railway 시드
+```
 
-문서 포함 내용:
-- 8개 local 계정 수동 가입 가이드 (비밀번호 `demo1234`)
-- 4개 모임 시나리오 (COLLECTING+표지투표 / EDITING / ORDERED+SHIPPED / 빈 모임)
-- 플래그십 기능 (카톡 zip import + 얼굴 anchor + 개인 포토북 자동 생성)
-- 알림 / 웹훅 시뮬레이션 / 에러 케이스 12개 / 반응형 UI 검증 체크리스트
-- DB / Redis / Supabase Storage 초기화 SQL·명령어
+> 배포 환경(`https://sweetbook-project.vercel.app`)에는 이미 시드가 적용되어 있으니 바로 로그인만 하면 됩니다.
+> 테스트 환경이 아니라 첫 로그인부터 직접 데이터를 추가하고 테스트하는것이 더 정확합니다.
+
+### 🔑 시드된 데모 계정 (8명, 비밀번호 모두 `demo1234`)
+
+| 이메일 | 이름 | 주요 역할 | 추천 검증 시나리오 |
+|--------|------|-----------|-------------------|
+| `demo01@groupbook.test` | 김지현 | 모임① owner | 표지 투표 진행 중 모임 |
+| `demo02@groupbook.test` | 박서준 | 모임② owner | 포토북 편집 중 (EDITING) |
+| `demo03@groupbook.test` | 이수민 | 모임①·② 멤버 | 멤버 시점에서 둘러보기 |
+| `demo04@groupbook.test` | 최도윤 | 모임①·② 멤버 | 표지 투표 참여자 |
+| **`demo05@groupbook.test`** | **정유나** | **모임③ owner** | **🌟 주문 + 개인 포토북 (가장 풍부한 시나리오)** |
+| `demo06@groupbook.test` | 한재민 | 모임①·③ 멤버 | 개인 포토북 멤버 |
+| `demo07@groupbook.test` | 윤서연 | 모임④ owner | 빈 모임 UI 확인 |
+| `demo08@groupbook.test` | 오준호 | 모임③ 멤버 | 얼굴 anchor 매칭 확인 |
+
+### 시나리오 상세
+ [`docs/test-scenarios.md`](./docs/test-scenarios.md) 참조 — 카톡 zip import, 얼굴 anchor 새로 등록, 웹훅 시뮬레이션, 에러 케이스 12종, 반응형 UI 체크리스트.
 
 ### 디렉토리 구조
 
