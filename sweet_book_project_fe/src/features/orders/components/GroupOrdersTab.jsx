@@ -1,4 +1,6 @@
-import { useGroupBooks } from '../../books/hooks/useBooks';
+import { useState } from 'react';
+import { useGroupBooks, useBook, useBookPages } from '../../books/hooks/useBooks';
+import { BookPreviewModal } from '../../books/components/BookPreviewModal';
 import { useMe } from '../../auth/hooks/useAuth';
 import { useOrderGroupByBook, useEstimate, useGroupMembersStatus } from '../hooks/useOrders';
 
@@ -25,7 +27,7 @@ function BookCoverThumb({ title }) {
   );
 }
 
-function BookOrderCard({ book, navigate }) {
+function BookOrderCard({ book, navigate, onPreview }) {
   const { data: me } = useMe();
   const { data: orderGroup, isError: ogNotFound } = useOrderGroupByBook(book.id);
   const { data: membersStatus } = useGroupMembersStatus(orderGroup?.id);
@@ -101,7 +103,7 @@ function BookOrderCard({ book, navigate }) {
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button type="button" onClick={() => navigate(`/books/${book.id}/preview`)}
+            <button type="button" onClick={() => onPreview(book.id)}
               className="h-8 px-3.5 text-[12px] font-medium text-ink border border-warm-border rounded-full bg-white hover:bg-warm-bg transition-colors">
               미리보기
             </button>
@@ -201,6 +203,9 @@ function OrderStatusPill({ status }) {
 
 export function GroupOrdersTab({ groupId, navigate }) {
   const { data: books, isLoading } = useGroupBooks(groupId);
+  const [previewBookId, setPreviewBookId] = useState(null);
+  const { data: previewBook } = useBook(previewBookId);
+  const { data: previewPages } = useBookPages(previewBookId);
 
   if (isLoading) {
     return (
@@ -239,7 +244,7 @@ export function GroupOrdersTab({ groupId, navigate }) {
           </h2>
           <div className="space-y-3">
             {activeBooks.map((book) => (
-              <BookOrderCard key={book.id} book={book} navigate={navigate} />
+              <BookOrderCard key={book.id} book={book} navigate={navigate} onPreview={setPreviewBookId} />
             ))}
           </div>
         </section>
@@ -252,10 +257,20 @@ export function GroupOrdersTab({ groupId, navigate }) {
           </h2>
           <div className="space-y-3">
             {draftBooks.map((book) => (
-              <BookOrderCard key={book.id} book={book} navigate={navigate} />
+              <BookOrderCard key={book.id} book={book} navigate={navigate} onPreview={setPreviewBookId} />
             ))}
           </div>
         </section>
+      )}
+
+      {previewBookId && (
+        <BookPreviewModal
+          book={previewBook}
+          pages={previewPages}
+          coverTemplateUid={previewBook?.coverTemplateUid}
+          coverParams={previewBook?.coverParams}
+          onClose={() => setPreviewBookId(null)}
+        />
       )}
     </div>
   );

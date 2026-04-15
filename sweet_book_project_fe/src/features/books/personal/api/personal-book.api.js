@@ -25,4 +25,6 @@ export const personalBookApi = {
     api.delete(
       `/groups/${groupId}/books/personal/${bookId}/photos/${photoId}`,
     ),
+  getMatches: (groupId, bookId) =>
+    api.get(`/groups/${groupId}/books/personal/${bookId}/matches`),
 };

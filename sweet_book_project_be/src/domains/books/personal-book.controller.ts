@@ -80,6 +80,15 @@ export class PersonalBookController {
     return this.personalBookService.getMyPersonalBook(groupId, req.user.id);
   }
 
+  @Get(':bookId/matches')
+  @ApiOperation({ summary: '개인 포토북 얼굴 매칭 사진 목록 조회' })
+  async getMatches(
+    @Req() req: AuthenticatedRequest,
+    @Param('bookId', ParseIntPipe) bookId: number,
+  ) {
+    return this.personalBookService.getMatchedPhotos(bookId, req.user.id);
+  }
+
   @Delete(':bookId/photos/:photoId')
   @ApiOperation({ summary: '개인 포토북에서 사진 제외 (오탐 교정)' })
   async exclude(

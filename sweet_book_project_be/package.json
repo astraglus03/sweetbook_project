@@ -23,7 +23,9 @@
     "migration:create": "typeorm-ts-node-commonjs migration:create",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "migration:show": "npm run typeorm -- migration:show"
+    "migration:show": "npm run typeorm -- migration:show",
+    "seed:demo": "ts-node --project tsconfig.seed.json --transpile-only scripts/seed/seed-demo.ts",
+    "seed:photos": "ts-node --project tsconfig.seed.json --transpile-only scripts/seed/photo-generator.ts"
   },
   "dependencies": {
     "@nestjs/bull": "^11.0.4",

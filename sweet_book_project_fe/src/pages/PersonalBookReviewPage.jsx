@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useBook, useBookPages } from '../features/books/hooks/useBooks';
-import { useExcludePhoto } from '../features/books/personal/hooks/usePersonalBook';
+import { useBook } from '../features/books/hooks/useBooks';
+import {
+  useExcludePhoto,
+  usePersonalMatches,
+} from '../features/books/personal/hooks/usePersonalBook';
 
 export function PersonalBookReviewPage() {
   const { groupId, bookId } = useParams();
@@ -10,7 +13,7 @@ export function PersonalBookReviewPage() {
   const navigate = useNavigate();
 
   const { data: book, isLoading } = useBook(numBookId);
-  const { data: pages } = useBookPages(numBookId);
+  const { data: matches = [] } = usePersonalMatches(numGroupId, numBookId);
   const excludeMut = useExcludePhoto(numGroupId, numBookId);
 
   const [removingId, setRemovingId] = useState(null);
@@ -65,9 +68,8 @@ export function PersonalBookReviewPage() {
     );
   }
 
-  const photoPages = (pages ?? []).filter(
-    (p) => p.photoId && !p.isCover && (p.thumbnailUrl || p.mediumUrl),
-  );
+  // 매칭된 사진(excludedByUser=false)만 노출. 페이지가 아니라 personal_book_matches 기반.
+  const photoPages = matches.filter((m) => m.thumbnailUrl || m.mediumUrl);
 
   return (
     <div className="min-h-screen bg-warm-bg">
@@ -113,13 +115,22 @@ export function PersonalBookReviewPage() {
           </div>
         )}
 
+        {photoPages.length === 0 && (
+          <div className="bg-white rounded-xl p-8 text-center text-ink/60 text-sm border border-[#E5E0D8]">
+            <p className="text-3xl mb-3">📷</p>
+            <p className="font-semibold text-ink mb-1">아직 사진이 없어요</p>
+            <p>
+              편집하기에서 <strong>내 사진</strong> 탭을 눌러 얼굴 매칭된 사진을 추가해보세요.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {photoPages.map((page) => {
-            const thumb = page.thumbnailUrl ?? page.mediumUrl;
-            const isRemoving = removingId === page.photoId;
+          {photoPages.map((match, idx) => {
+            const thumb = match.thumbnailUrl ?? match.mediumUrl;
+            const isRemoving = removingId === match.id;
             return (
               <div
-                key={page.id}
+                key={match.id}
                 className="relative aspect-square rounded-lg overflow-hidden bg-[#FAF7F2] group"
               >
                 <img
@@ -129,7 +140,7 @@ export function PersonalBookReviewPage() {
                   loading="lazy"
                 />
                 <button
-                  onClick={() => handleExclude(page.photoId)}
+                  onClick={() => handleExclude(match.id)}
                   disabled={isRemoving}
                   className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-red-500 text-white rounded-full w-7 h-7 text-xs flex items-center justify-center transition-colors disabled:opacity-50"
                   title="이 사람 나 아니에요"
@@ -137,7 +148,7 @@ export function PersonalBookReviewPage() {
                   {isRemoving ? '...' : '✕'}
                 </button>
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1">
-                  <span className="text-white text-xs">#{page.pageNumber}</span>
+                  <span className="text-white text-xs">#{idx + 1}</span>
                 </div>
               </div>
             );
