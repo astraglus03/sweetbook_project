@@ -98,6 +98,18 @@ export function usePersonalBookJob(groupId, jobId) {
   });
 }
 
+export function usePersonalMatches(groupId, bookId) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'personal-book', bookId, 'matches'],
+    queryFn: async () => {
+      const res = await personalBookApi.getMatches(groupId, bookId);
+      return res.data;
+    },
+    enabled: !!groupId && !!bookId,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useExcludePhoto(groupId, bookId) {
   const qc = useQueryClient();
   return useMutation({

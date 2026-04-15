@@ -16,6 +16,8 @@ import {
   ValidationException,
 } from '../../common/exceptions';
 import { ActivitiesService } from '../activities/activities.service';
+import { StorageService } from '../../common/storage/storage.service';
+import { PhotoResponseDto } from '../photos/dto/photo-response.dto';
 
 // TEMP_TEST_THRESHOLD: 테스트용 완화값. 원복 시 MIN_PAGES = 12 로 되돌릴 것
 const MIN_PAGES = 12;
@@ -53,6 +55,7 @@ export class PersonalBookService {
     private readonly faceApi: FaceApiService,
     private readonly sweetbookApi: SweetbookApiService,
     private readonly activitiesService: ActivitiesService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -312,18 +315,10 @@ export class PersonalBookService {
       });
       await mgr.save(matchRows);
 
-      const pages = photos.map((p, idx) =>
-        mgr.create(BookPage, {
-          bookId: book.id,
-          pageNumber: idx + 1,
-          photoId: p.id,
-          contentTemplateUid: defaults.contentTemplateUid,
-          templateParams: { [defaults.contentBindingKey]: String(p.id) },
-        }),
-      );
-      await mgr.save(pages);
-
+      // book_pages는 자동 생성하지 않음 — 사용자가 편집기에서 직접 추가
+      // (매칭된 사진은 편집기의 "내 사진" 탭에서 선택)
       book.status = 'READY_TO_REVIEW';
+      book.pageCount = 0;
       await mgr.save(book);
 
       this.logger.log(
@@ -354,6 +349,33 @@ export class PersonalBookService {
       where: { groupId, ownerUserId: userId, bookType: 'PERSONAL' },
       relations: ['pages', 'coverPhoto'],
     });
+  }
+
+  async getMatchedPhotos(
+    bookId: number,
+    userId: number,
+  ): Promise<PhotoResponseDto[]> {
+    const book = await this.bookRepo.findOne({ where: { id: bookId } });
+    if (!book) {
+      throw new NotFoundException(
+        'PERSONAL_BOOK_NOT_FOUND',
+        '개인 포토북을 찾을 수 없어요',
+      );
+    }
+    if (book.bookType !== 'PERSONAL' || book.ownerUserId !== userId) {
+      throw new ForbiddenException(
+        'PERSONAL_BOOK_NOT_OWNER',
+        '본인의 개인 포토북만 조회할 수 있어요',
+      );
+    }
+    const matches = await this.matchRepo.find({
+      where: { bookId, excludedByUser: false },
+    });
+    if (matches.length === 0) return [];
+    const photoIds = matches.map((m) => m.photoId);
+    const photos = await this.photoRepo.find({ where: { id: In(photoIds) } });
+    const publicBase = this.storageService.getPublicBase();
+    return photos.map((p) => PhotoResponseDto.from(p, publicBase));
   }
 
   async excludeMatch(

@@ -35,3 +35,5 @@ Thumbs.db
 # Claude Code worktrees
 .claude/worktrees/
 .claude/
+# Seed test data
+test-data/seed/

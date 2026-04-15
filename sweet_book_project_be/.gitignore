@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # face-api 모델 바이너리 (scripts/download-face-models.sh로 생성)
 models/
+
+# Seed test data (generated locally)
+test-data/seed/

@@ -17,6 +17,7 @@ import { PersonalBookProcessor } from './personal-book.processor';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { CoverVotingModule } from '../cover-voting/cover-voting.module';
+import { StorageModule } from '../../common/storage/storage.module';
 import { bullConfig, QUEUE_NAMES } from '../../config/bull.config';
 
 @Module({
@@ -39,6 +40,7 @@ import { bullConfig, QUEUE_NAMES } from '../../config/bull.config';
     NotificationsModule,
     ActivitiesModule,
     CoverVotingModule,
+    StorageModule,
   ],
   controllers: [BooksController, PersonalBookController],
   providers: [BooksService, PersonalBookService, PersonalBookProcessor],

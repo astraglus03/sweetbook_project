@@ -14,6 +14,7 @@ import {
   useSetCover,
 } from '../features/books/hooks/useBooks';
 import { usePhotos, useUploadPhotos } from '../features/photos/hooks/usePhotos';
+import { usePersonalMatches } from '../features/books/personal/hooks/usePersonalBook';
 
 const SPEC_NAMES = {
   SQUAREBOOK_HC: '정사각 하드커버',
@@ -264,6 +265,130 @@ function PhotoPicker({ photos, onSelect, onClose, groupId }) {
               ))}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Personal Bulk Photo Picker (2-tab: 전체 / 내 사진) ───
+
+function PersonalBulkPhotoPicker({ allPhotos, groupId, bookId, onConfirm, onClose }) {
+  const [activeTab, setActiveTab] = useState('mine');
+  const [selected, setSelected] = useState(new Set());
+  const { data: matchedPhotos = [], isLoading: matchLoading } = usePersonalMatches(groupId, bookId);
+
+  const photos = activeTab === 'mine' ? matchedPhotos : allPhotos;
+
+  const toggle = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selected.size === photos.length && photos.length > 0) setSelected(new Set());
+    else setSelected(new Set(photos.map((p) => p.id)));
+  };
+
+  const handleConfirm = () => {
+    if (selected.size === 0) return;
+    const allPool = [...matchedPhotos, ...allPhotos];
+    const deduped = new Map(allPool.map((p) => [p.id, p]));
+    const ordered = [...selected].map((id) => deduped.get(id)).filter(Boolean);
+    onConfirm(ordered);
+  };
+
+  const tabs = [
+    { id: 'mine', label: '내 사진' },
+    { id: 'all', label: '전체 포토' },
+  ];
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="사진 추가" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 border-b border-warm-border flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-ink">사진 추가</h3>
+            <p className="text-xs text-ink-sub mt-0.5">선택한 사진마다 한 페이지씩 자동 생성됩니다</p>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full hover:bg-warm-bg text-ink-sub" aria-label="닫기">✕</button>
+        </div>
+        <div className="px-4 pt-3 pb-0 flex gap-2 border-b border-warm-border">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => { setActiveTab(tab.id); setSelected(new Set()); }}
+              className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-ink-sub hover:text-ink'
+              }`}
+            >
+              {tab.label}
+              {tab.id === 'mine' && !matchLoading && (
+                <span className="ml-1.5 text-[10px] bg-brand/10 text-brand rounded-full px-1.5 py-0.5">
+                  {matchedPhotos.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="px-4 py-2 flex items-center justify-between bg-warm-bg/40">
+          <button type="button" onClick={handleSelectAll}
+            className="text-xs text-brand font-semibold hover:text-brand-hover">
+            {selected.size === photos.length && photos.length > 0 ? '전체 해제' : '전체 선택'}
+          </button>
+          <span className="text-xs text-ink-sub">{selected.size}장 선택됨</span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {matchLoading && activeTab === 'mine' ? (
+            <div className="flex justify-center py-16">
+              <div className="animate-spin w-6 h-6 border-2 border-brand border-t-transparent rounded-full" />
+            </div>
+          ) : photos.length === 0 ? (
+            <div className="text-center py-16 text-ink-muted text-sm">
+              {activeTab === 'mine' ? '얼굴 매칭된 사진이 없습니다' : '보관함에 사진이 없습니다'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {photos.map((photo) => {
+                const isSel = selected.has(photo.id);
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => toggle(photo.id)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 relative transition-all ${
+                      isSel ? 'border-brand ring-2 ring-brand/30' : 'border-warm-border hover:border-brand/40'
+                    }`}
+                    aria-pressed={isSel}
+                  >
+                    <img src={photo.thumbnailUrl || photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    {isSel && (
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-brand text-white text-[10px] font-bold flex items-center justify-center shadow">
+                        ✓
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-warm-border flex gap-2 justify-end">
+          <button type="button" onClick={onClose}
+            className="h-10 px-5 rounded-full text-sm text-ink-sub hover:bg-warm-bg">
+            취소
+          </button>
+          <button type="button" onClick={handleConfirm} disabled={selected.size === 0}
+            className="h-10 px-5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-hover disabled:opacity-40">
+            {selected.size}장 추가
+          </button>
         </div>
       </div>
     </div>
@@ -1041,13 +1166,21 @@ export function BookEditorPage() {
         />
       )}
 
-      {showBulkPicker && (
+      {showBulkPicker && isPersonal ? (
+        <PersonalBulkPhotoPicker
+          allPhotos={photos}
+          groupId={groupId}
+          bookId={numBookId}
+          onConfirm={handleBulkAdd}
+          onClose={() => setShowBulkPicker(false)}
+        />
+      ) : showBulkPicker ? (
         <BulkPhotoPicker
           photos={photos}
           onConfirm={handleBulkAdd}
           onClose={() => setShowBulkPicker(false)}
         />
-      )}
+      ) : null}
     </div>
   );
 }
